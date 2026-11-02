@@ -12,6 +12,7 @@
 
 - `index.html` をブラウザで開けば始まります（サーバー不要）。
 - 公開版（GitHub Pages）：`https://kaikomziu.github.io/darkwebdark2/`
+  - Pages は **`gh-pages` ブランチ** から公開しています。更新したら `main` と同じ内容を `gh-pages` にもプッシュしてください（`git push origin main:gh-pages`）。
 - スマホ・PC 両対応（タップ／クリック、画面幅 390px〜）。1周 40〜60分ほど。
 - 各ページの最初に入口ボタンがあります（音を鳴らすためにタップが必要なため）。
 - 進行状況はブラウザ（localStorage）に自動保存されます。最初からやり直すときは、クリア後のひびログにある「さいしょから」を押してください。
