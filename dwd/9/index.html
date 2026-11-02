@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/09</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  .planbox { position: relative; max-width: 720px; margin: 14px auto 0; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+  .planbox canvas { display: block; width: 100%; height: auto; }
+  #dark { position: absolute; inset: 0; pointer-events: none; }
+  .info { max-width: 720px; margin: 10px auto 0; min-height: 4.2em; border: 1px solid #1e1a18; background: #070505; padding: 10px 12px; font-size: 14px; line-height: 1.8; }
+  .info b { color: #c9bfb2; }
+  .legend { font-family: "Courier New", monospace; font-size: 12px; color: #6b5d55; text-align: center; letter-spacing: .05em; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 09 / まどり<span class="sub">LAYER 03 の　した</span></div>
+  <h1 class="logo">DarkWebDark/09</h1>
+  <div class="draft"><span class="dh">まい の 下書き ／ 11/04 02:13</span>へやと　へやの　あいだを　はかって。<br>たりない　ぶんが　ある。</div>
+  <p class="msg dim">ゆびで　てらして。　さわると　しらべる</p>
+  <p class="legend">みどり荘 2F 平面図 ／ 外寸 15.3m ／ ※ 寸法は壁の中心から</p>
+  <div class="planbox" id="box">
+    <canvas id="plan"></canvas>
+    <canvas id="dark"></canvas>
+  </div>
+  <div class="info" id="info">くらい。　なにも　みえない。</div>
+  <p class="msg red" id="goal" style="margin-top:14px">かべを　3かい　たたいて。　ただしい　かべなら　こたえる</p>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.04);
+  DWD.reach(9);
+  var plan = document.getElementById('plan');
+  var dark = document.getElementById('dark');
+  var box = document.getElementById('box');
+  var info = document.getElementById('info');
+  var pc = plan.getContext('2d');
+  var dc = dark.getContext('2d');
+
+  // 建物の座標（メートル）。along = 建物の長さ方向、across = 奥行き方向
+  var LEN = 15.3, DEP = 6.8;
+  var ROOMS = [
+    { id: '201', a0: 0, a1: 3.6, note: '<b>201　田村</b><br>ドアに苦情のメモ。「となりの202の人、夜中に壁を叩いてる。うるさい」<br>部屋の幅　3.6m' },
+    { id: '202', a0: 3.6, a1: 7.2, note: '<b>202　白石（ゆき）</b><br>部屋の幅　3.6m。<br>203側の壁だけ、たたくと音が　かるい。なかが　からっぽ　みたい。' },
+    { id: '203', a0: 8.1, a1: 11.7, note: '<b>203　倉庫（管理　間宮）</b><br>部屋の幅　3.6m。<br>202側の壁が、なぜか　ぶあつい。' },
+    { id: '204', a0: 11.7, a1: 15.3, note: '<b>204　空室</b><br>部屋の幅　3.6m。　ふつうの　へや。' }
+  ];
+  // 壁（たたける場所）。gap が「あいだ」
+  var WALLS = [
+    { id: 'w12', a0: 3.45, a1: 3.75, label: '201と202の　かべ' },
+    { id: 'gap', a0: 7.2, a1: 8.1, label: '202と203の　かべ', gap: true },
+    { id: 'w34', a0: 11.55, a1: 11.85, label: '203と204の　かべ' }
+  ];
+  var vertical = false, W = 0, H = 0, S = 1, OX = 0, OY = 0;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var opened = false;
+  var ghost = null;
+
+  function layout() {
+    var bw = box.clientWidth;
+    vertical = window.innerWidth < 600 && window.innerHeight > window.innerWidth;
+    var along = LEN + 2.2, across = DEP + 1.2; // 余白・階段・寸法線ぶん
+    if (vertical) { W = bw; S = W / across; H = along * S; }
+    else { W = bw; S = W / along; H = across * S; }
+    [plan, dark].forEach(function (c) {
+      c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+      c.style.height = H + 'px';
+    });
+    pc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    OX = vertical ? 0.6 * S : 1.8 * S;
+    OY = vertical ? 1.8 * S : 0.9 * S;
+    if (!light) light = { x: W * 0.2, y: H * 0.5 };
+    draw();
+  }
+  // 建物座標 → 画面座標
+  function P(a, c) {
+    return vertical ? { x: OX + c * S, y: OY + a * S } : { x: OX + a * S, y: OY + c * S };
+  }
+  function R(a0, a1, c0, c1) {
+    var p0 = P(a0, c0), p1 = P(a1, c1);
+    return { x: Math.min(p0.x, p1.x), y: Math.min(p0.y, p1.y), w: Math.abs(p1.x - p0.x), h: Math.abs(p1.y - p0.y) };
+  }
+  // 画面座標 → 建物座標
+  function inv(x, y) {
+    return vertical ? { a: (y - OY) / S, c: (x - OX) / S } : { a: (x - OX) / S, c: (y - OY) / S };
+  }
+
+  function draw() {
+    pc.clearRect(0, 0, W, H);
+    pc.fillStyle = '#0c0a09';
+    pc.fillRect(0, 0, W, H);
+    // 方眼
+    pc.strokeStyle = 'rgba(80,90,120,.12)';
+    pc.lineWidth = 1;
+    for (var g = 0; g < Math.max(W, H); g += S * 0.9) {
+      pc.beginPath(); pc.moveTo(g, 0); pc.lineTo(g, H); pc.stroke();
+      pc.beginPath(); pc.moveTo(0, g); pc.lineTo(W, g); pc.stroke();
+    }
+    var fs = Math.max(11, S * 0.42);
+    pc.font = fs + 'px "Courier New", monospace';
+    pc.textAlign = 'center';
+    pc.textBaseline = 'middle';
+    // 部屋
+    ROOMS.forEach(function (r) {
+      var q = R(r.a0, r.a1, 0, 5.4);
+      pc.fillStyle = '#16120f';
+      pc.fillRect(q.x, q.y, q.w, q.h);
+      pc.strokeStyle = '#9a9080';
+      pc.lineWidth = 2;
+      pc.strokeRect(q.x, q.y, q.w, q.h);
+      pc.fillStyle = '#c9bfb2';
+      pc.fillText(r.id, q.x + q.w / 2, q.y + q.h / 2 - fs * 0.7);
+      pc.fillStyle = '#7a6e62';
+      pc.fillText('3.6m', q.x + q.w / 2, q.y + q.h / 2 + fs * 0.7);
+      // ドア
+      var d = R((r.a0 + r.a1) / 2 - 0.4, (r.a0 + r.a1) / 2 + 0.4, 5.3, 5.5);
+      pc.fillStyle = '#6a563f';
+      pc.fillRect(d.x, d.y, d.w, d.h);
+    });
+    // あいだ（ぶあつい壁）
+    var gq = R(7.2, 8.1, 0, 5.4);
+    if (opened) {
+      pc.fillStyle = '#3a0000';
+      pc.fillRect(gq.x, gq.y, gq.w, gq.h);
+      // 立ったまま並ぶ人たち
+      for (var k = 0; k < 7; k++) {
+        var pp = P(7.65, 0.5 + k * 0.7);
+        pc.fillStyle = '#000';
+        pc.beginPath(); pc.arc(pp.x, pp.y, S * 0.17, 0, Math.PI * 2); pc.fill();
+      }
+    } else {
+      pc.save();
+      pc.beginPath(); pc.rect(gq.x, gq.y, gq.w, gq.h); pc.clip();
+      pc.strokeStyle = '#5a4a40';
+      pc.lineWidth = 1.5;
+      for (var t = -gq.h; t < gq.w + gq.h; t += 7) { pc.beginPath(); pc.moveTo(gq.x + t, gq.y); pc.lineTo(gq.x + t - gq.h, gq.y + gq.h); pc.stroke(); }
+      pc.restore();
+      pc.strokeStyle = '#9a9080';
+      pc.strokeRect(gq.x, gq.y, gq.w, gq.h);
+    }
+    // 外廊下
+    var cq = R(0, LEN, 5.4, 6.6);
+    pc.strokeStyle = '#5a5248';
+    pc.setLineDash([6, 5]);
+    pc.strokeRect(cq.x, cq.y, cq.w, cq.h);
+    pc.setLineDash([]);
+    pc.fillStyle = '#5a5248';
+    pc.fillText('外廊下', cq.x + cq.w / 2, cq.y + cq.h / 2);
+    // 階段
+    var sq = R(-1.5, 0, 4.4, 6.6);
+    pc.strokeStyle = '#5a5248';
+    pc.strokeRect(sq.x, sq.y, sq.w, sq.h);
+    for (var st = 0; st < 6; st++) {
+      var l = R(-1.5 + st * 0.25, -1.5 + st * 0.25, 4.4, 6.6);
+      pc.beginPath(); pc.moveTo(l.x, l.y); pc.lineTo(l.x + (vertical ? l.w : 0), l.y + (vertical ? 0 : l.h)); pc.stroke();
+    }
+    // 外寸の寸法線
+    var d0 = P(0, -0.45), d1 = P(LEN, -0.45);
+    pc.strokeStyle = '#8a7e70';
+    pc.beginPath(); pc.moveTo(d0.x, d0.y); pc.lineTo(d1.x, d1.y); pc.stroke();
+    pc.fillStyle = '#c9bfb2';
+    var mid = P(LEN / 2, -0.45);
+    pc.fillStyle = '#0c0a09';
+    pc.fillRect(mid.x - fs * 2.2, mid.y - fs * 0.7, fs * 4.4, fs * 1.4);
+    pc.fillStyle = '#c9bfb2';
+    pc.fillText('15.3m', mid.x, mid.y);
+    // ゴースト（廊下にたまに立つ）
+    if (ghost) {
+      var gp = P(ghost.a, 6.0);
+      pc.fillStyle = '#e8e2d0';
+      pc.beginPath(); pc.ellipse(gp.x, gp.y, S * 0.16, S * 0.22, 0, 0, Math.PI * 2); pc.fill();
+      pc.fillStyle = '#000';
+      pc.fillRect(gp.x - S * 0.17, gp.y - S * 0.25, S * 0.34, S * 0.12);
+    }
+    drawDark();
+  }
+
+  var light = null;
+  function drawDark() {
+    dc.clearRect(0, 0, W, H);
+    dc.globalCompositeOperation = 'source-over';
+    dc.fillStyle = 'rgba(0,0,0,.95)';
+    dc.fillRect(0, 0, W, H);
+    if (!light) return;
+    var r = Math.max(70, Math.min(W, H) * 0.24);
+    dc.globalCompositeOperation = 'destination-out';
+    var g = dc.createRadialGradient(light.x, light.y, r * 0.15, light.x, light.y, r);
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(0.7, 'rgba(0,0,0,.85)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    dc.fillStyle = g;
+    dc.beginPath(); dc.arc(light.x, light.y, r, 0, Math.PI * 2); dc.fill();
+    dc.globalCompositeOperation = 'source-over';
+    // ゴーストを照らしてしまった
+    if (ghost) {
+      var gp = P(ghost.a, 6.0);
+      if (Math.hypot(gp.x - light.x, gp.y - light.y) < r * 0.6) {
+        ghost = null;
+        DWD.flash(90, 'girl');
+        DWD.sfx.breath();
+        setTimeout(draw, 60);
+      }
+    }
+  }
+
+  function pos(e) {
+    var rc = plan.getBoundingClientRect();
+    return { x: (e.clientX - rc.left) * (W / rc.width), y: (e.clientY - rc.top) * (H / rc.height) };
+  }
+  box.addEventListener('pointermove', function (e) {
+    light = pos(e);
+    drawDark();
+  });
+  box.addEventListener('pointerdown', function (e) {
+    light = pos(e);
+    drawDark();
+    tap(inv(light.x, light.y));
+  });
+
+  // しらべる・たたく
+  var lastWall = null, wallCount = 0, wallTimer = 0, w34tries = 0;
+  function tap(m) {
+    if (opened || DWD.isScaring()) return;
+    var wall = null;
+    WALLS.forEach(function (w) { if (m.a >= w.a0 - 0.15 && m.a <= w.a1 + 0.15 && m.c >= 0 && m.c <= 5.4) wall = w; });
+    if (wall) {
+      DWD.sfx.knock(1, 0.3, 0.7);
+      clearTimeout(wallTimer);
+      if (lastWall === wall.id) wallCount++; else { lastWall = wall.id; wallCount = 1; }
+      wallTimer = setTimeout(function () { wallCount = 0; lastWall = null; }, 2200);
+      info.innerHTML = '<b></b><br>コン　×' + wallCount;
+      info.querySelector('b').textContent = wall.label;
+      if (wallCount >= 3) {
+        wallCount = 0; lastWall = null;
+        if (wall.gap) return open();
+        if (wall.id === 'w34' && ++w34tries >= 2) {
+          DWD.inc('miss');
+          setTimeout(function () { DWD.scare({ type: 'hands', dur: 1200 }); }, 700);
+          info.innerHTML = 'そこじゃない';
+          return;
+        }
+        DWD.inc('miss');
+        setTimeout(function () { info.innerHTML = '……なにも　かえってこない。　かべの　なかは　つまっている'; }, 1100);
+      }
+      return;
+    }
+    var room = null;
+    ROOMS.forEach(function (r) { if (m.a >= r.a0 && m.a <= r.a1 && m.c >= 0 && m.c <= 5.4) room = r; });
+    if (room) { info.innerHTML = room.note; DWD.sfx.blip(); return; }
+    if (m.a >= -1.5 && m.a <= 0 && m.c >= 4.4 && m.c <= 6.6) { info.innerHTML = '<b>かいだん</b><br>13だん。　のぼると　手前から　201、202、203、204。'; return; }
+    if (m.c > 5.4 && m.c <= 6.6) { info.innerHTML = '<b>外廊下</b><br>奥の蛍光灯が　チカチカしている。'; return; }
+    if (m.c < 0) { info.innerHTML = '<b>外寸　15.3m</b><br>3.6m の部屋が　4つ。'; return; }
+    info.textContent = 'くらい。';
+  }
+
+  function open() {
+    opened = true;
+    info.innerHTML = '<b>202と203の　あいだ</b><br>コン　コン　コン　――　コン　コン　コン。<br><span style="color:#d33">こたえた。　15.3 − 3.6 × 4 ＝ 0.9m。　ここに　へやが　ある。</span>';
+    DWD.sfx.knock(3, 0.3);
+    setTimeout(function () {
+      DWD.sfx.stinger();
+      draw();
+      light = P(7.65, 2.7);
+      drawDark();
+    }, 1300);
+    setTimeout(function () {
+      DWD.reach(10);
+      document.getElementById('goal').textContent = 'まいは　ここに　はいった。　しょうこを　みせる';
+      DWD.go('../10/index.html', 1300);
+    }, 5200);
+  }
+
+  window.addEventListener('resize', function () { layout(); });
+  layout();
+
+  DWD.gate({ title: 'LAYER 09 に　おりますか', button: 'おりる', warn: 'ゆびやマウスで照らして、さわると調べられます' }).then(function () {
+    DWD.drone(0.12);
+    // ときどき廊下にだれかが立つ
+    (function spawn() {
+      setTimeout(function () {
+        if (!opened && !ghost) { ghost = { a: DWD.rand(1, 14) }; draw(); setTimeout(function () { ghost = null; draw(); }, 7000); }
+        spawn();
+      }, DWD.rand(12000, 22000));
+    })();
+    DWD.haunt({ min: 22000, max: 36000, big: false, silent: true, paused: function () { return opened; } });
+  });
+})();
+</script>
+</body>
+</html>

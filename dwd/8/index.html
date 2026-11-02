@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/08</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  .player { max-width: 560px; margin: 18px auto 0; background: #0b0a0c; border: 1px solid #2a2228; border-radius: 10px; padding: 14px; font-family: "Courier New", monospace; }
+  .player .fn { font-size: 13px; color: #8a7a80; letter-spacing: .1em; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .spec { display: block; width: 100%; height: auto; aspect-ratio: 512 / 170; margin: 10px 0 6px; background: #000; border: 1px solid #1d1719; image-rendering: pixelated; }
+  .tl { position: relative; height: 6px; background: #1d1719; border-radius: 3px; overflow: hidden; }
+  .tl i { position: absolute; top: 0; bottom: 0; width: 3px; background: #e33; left: 0; }
+  .ctl { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+  .ctl button { font: inherit; font-size: 15px; min-width: 64px; min-height: 44px; background: #151215; border: 1px solid #3a2a30; color: #d8c8cc; border-radius: 6px; cursor: pointer; padding: 0 12px; }
+  .ctl button.on { border-color: #e33; color: #f66; }
+  .ctl .grp { display: flex; gap: 4px; }
+  .sub { min-height: 3.6em; margin-top: 12px; background: #000; border: 1px solid #1d1719; padding: 10px; color: #e8e0e0; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: 16px; letter-spacing: .1em; line-height: 1.8; overflow-wrap: anywhere; }
+  .sub .lbl { display: block; font-family: "Courier New", monospace; font-size: 11px; color: #5d4a50; letter-spacing: .2em; }
+  .stat { font-size: 12px; color: #6b5a60; text-align: center; margin-top: 6px; min-height: 1.4em; }
+  .ask { text-align: center; margin-top: 22px; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 08 / ろくおん<span class="sub">voice_1104_0213</span></div>
+  <h1 class="logo">DarkWebDark/08</h1>
+  <div class="draft"><span class="dh">まい の 下書き ／ 11/04 02:13</span>かべの　なかで　しゃべると、ことばが　さかさまに　なる。<br>だから　ろくおんも　さかさま。</div>
+  <div class="player">
+    <div class="fn"><span>voice_1104_0213.m4a</span><span id="tm">0:00 / 0:00</span></div>
+    <canvas class="spec" id="spec" width="512" height="170"></canvas>
+    <div class="tl"><i id="head"></i></div>
+    <div class="ctl">
+      <button type="button" id="fwd">▶ 再生</button>
+      <button type="button" id="rev">◀ 逆再生</button>
+      <button type="button" id="stop">■</button>
+    </div>
+    <div class="ctl">
+      <span class="grp" id="speeds"><button type="button" data-s="0.5">0.5×</button><button type="button" data-s="1" class="on">1×</button><button type="button" data-s="2">2×</button></span>
+    </div>
+    <div class="sub" id="sub"><span class="lbl">じまく（自動）</span><span id="subt"></span></div>
+    <div class="stat" id="stat">　</div>
+  </div>
+  <div class="ask">
+    <p class="msg">あいことば　を　いれて</p>
+    <form class="row" id="form"><input class="input" id="ans" maxlength="12" placeholder="あいことば" autocomplete="off"><button class="btn">いれる</button></form>
+    <p class="err" id="err"></p>
+  </div>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.04);
+  DWD.reach(8);
+
+  // ほんとうの言葉（逆再生すると聞こえる）
+  var TRUE_TEXT = 'これを　きいている　あなたへ。　まいです。　ゆきは　へやと　へやの　あいだに　いる。　あいことばは　まだいる。';
+  // 録音にはさかさまに入っている
+  var REC_TEXT = TRUE_TEXT.split('').reverse().join('');
+
+  /* ---------- 声の合成（母音のフォルマントを持つ簡単な音声） ---------- */
+  var V = {
+    a: 'あかさたなはまやらわがざだばぱぁゃ', i: 'いきしちにひみりぎじぢびぴぃ', u: 'うくすつぬふむゆるぐずづぶぷぅゅっ',
+    e: 'えけせてねへめれげぜでべぺぇ', o: 'おこそとのほもよろをごぞどぼぽぉょ', n: 'ん'
+  };
+  var FORM = { a: [800, 1200], i: [300, 2300], u: [350, 1300], e: [500, 1900], o: [450, 850], n: [280, 1600] };
+  function vowelOf(ch) {
+    for (var k in V) if (V[k].indexOf(ch) >= 0) return k;
+    return null;
+  }
+  var buf = null, rbuf = null, marks = [], dur = 0, env = [];
+  // 音が出せない端末でも字幕が出るよう、時間割だけ先に作る
+  (function timeline() {
+    var t = 0.3;
+    REC_TEXT.split('').forEach(function (ch) {
+      var len = vowelOf(ch) ? 0.15 : ch === '。' ? 0.42 : 0.12;
+      marks.push({ t0: t, t1: t + len, ch: ch });
+      t += len;
+    });
+    dur = t + 1.6;
+  })();
+  function build() {
+    var ctx = DWD.audio();
+    if (!ctx) return false;
+    var sr = ctx.sampleRate;
+    var syl = 0.15, gapS = 0.12, gapL = 0.42;
+    // 長さを先に計算
+    var total = 0.3;
+    REC_TEXT.split('').forEach(function (ch) {
+      total += vowelOf(ch) ? syl : ch === '。' ? gapL : gapS;
+    });
+    total += 1.6; // 最後にノック
+    dur = total;
+    var n = Math.ceil(total * sr);
+    var data = new Float32Array(n);
+    var t = 0.3;
+    var phase = 0;
+    marks = [];
+    REC_TEXT.split('').forEach(function (ch, idx) {
+      var v = vowelOf(ch);
+      var len = v ? syl : ch === '。' ? gapL : gapS;
+      marks.push({ t0: t, t1: t + len, ch: ch });
+      if (v) {
+        var s0 = Math.floor(t * sr), s1 = Math.floor((t + len) * sr);
+        var f0 = 215 + Math.sin(idx * 1.7) * 25 + (Math.random() * 10 - 5);
+        var fm = FORM[v];
+        // 2つの共振器
+        var rs = fm.map(function (f, k) {
+          var bw = k ? 120 : 90;
+          var r = Math.exp(-Math.PI * bw / sr);
+          return { a1: 2 * r * Math.cos(2 * Math.PI * f / sr), a2: -r * r, g: (1 - r) * (k ? 0.6 : 1), y1: 0, y2: 0 };
+        });
+        var cons = 'あいうえおん'.indexOf(ch) < 0;
+        for (var s = s0; s < s1 && s < n; s++) {
+          var tt = (s - s0) / sr;
+          var e = Math.min(1, tt / 0.015) * Math.min(1, (len - tt) / 0.03);
+          phase += (f0 * (1 - tt * 0.6)) / sr;
+          if (phase > 1) phase -= 1;
+          var src = (1 - 2 * phase) * 0.6 + (Math.random() * 2 - 1) * 0.25;
+          if (cons && tt < 0.03) src = (Math.random() * 2 - 1) * 1.2; // 子音のノイズ
+          var out = 0;
+          rs.forEach(function (R) {
+            var y = R.g * src + R.a1 * R.y1 + R.a2 * R.y2;
+            R.y2 = R.y1; R.y1 = y;
+            out += y;
+          });
+          data[s] += out * e * 3.2;
+        }
+      }
+      t += len;
+    });
+    // ノック3回
+    [0.3, 0.6, 0.9].forEach(function (k) {
+      var s0 = Math.floor((t + k) * sr);
+      for (var s = 0; s < sr * 0.15 && s0 + s < n; s++) {
+        var tt = s / sr;
+        data[s0 + s] += (Math.sin(2 * Math.PI * (130 - tt * 300) * tt) * 0.9 + (Math.random() * 2 - 1) * 0.3 * Math.exp(-tt * 80)) * Math.exp(-tt * 28);
+      }
+    });
+    // うっすらノイズ
+    for (var i = 0; i < n; i++) data[i] = Math.max(-1, Math.min(1, data[i] * 0.55 + (Math.random() * 2 - 1) * 0.015));
+    buf = ctx.createBuffer(1, n, sr);
+    buf.getChannelData(0).set(data);
+    rbuf = ctx.createBuffer(1, n, sr);
+    var rd = rbuf.getChannelData(0);
+    for (i = 0; i < n; i++) rd[i] = data[n - 1 - i];
+    // スペクトログラム用の音量
+    env = [];
+    var W = 512;
+    for (var x = 0; x < W; x++) {
+      var a = Math.floor((x / W) * n), b = Math.floor(((x + 1) / W) * n), sum = 0;
+      for (var j = a; j < b; j++) sum += data[j] * data[j];
+      env.push(Math.sqrt(sum / Math.max(1, b - a)));
+    }
+    return true;
+  }
+
+  /* ---------- スペクトログラム（逆再生すると顔が浮かぶ） ---------- */
+  var spec = document.getElementById('spec');
+  var sc = spec.getContext('2d');
+  var faceCv = document.createElement('canvas');
+  faceCv.width = 512; faceCv.height = 170;
+  (function () {
+    var tmp = document.createElement('canvas');
+    tmp.width = 170; tmp.height = 170;
+    DWD.drawFace(tmp.getContext('2d'), 170, 170, { noPupil: false });
+    var fc = faceCv.getContext('2d');
+    fc.drawImage(tmp, 171, 0);
+  })();
+  function drawSpec(pos, reverse) {
+    var W = 512, Hh = 170;
+    sc.fillStyle = '#000';
+    sc.fillRect(0, 0, W, Hh);
+    for (var x = 0; x < W; x++) {
+      var e = env.length ? env[reverse ? W - 1 - x : x] : 0.02;
+      for (var y = 0; y < Hh; y += 2) {
+        var f = 1 - y / Hh;
+        var v = Math.min(1, e * 5 * (0.4 + Math.random() * 0.8) * (1 - f * 0.7));
+        if (v < 0.05) continue;
+        sc.fillStyle = 'rgba(' + Math.round(80 + v * 175) + ',' + Math.round(v * 70) + ',' + Math.round(v * 90) + ',' + (v * 0.9) + ')';
+        sc.fillRect(x, y, 1, 2);
+      }
+    }
+    // 逆再生中は、再生したところまで顔が浮かびあがる
+    if (reverse && pos !== null) {
+      var shown = Math.floor(pos * W);
+      sc.save();
+      sc.globalAlpha = speed === 0.5 ? 0.55 : 0.28;
+      sc.beginPath();
+      sc.rect(0, 0, shown, Hh);
+      sc.clip();
+      sc.drawImage(faceCv, 0, 0);
+      sc.restore();
+    }
+    if (pos !== null) {
+      sc.fillStyle = '#e33';
+      sc.fillRect(Math.floor(pos * W), 0, 2, Hh);
+    }
+  }
+  drawSpec(null, false);
+
+  /* ---------- 再生 ---------- */
+  var speed = 1;
+  var src = null, startAt = 0, mode = null, raf = 0;
+  var subt = document.getElementById('subt');
+  var stat = document.getElementById('stat');
+  var headEl = document.getElementById('head');
+  var tmEl = document.getElementById('tm');
+  var revSlowDone = !!DWD.get('l8heard');
+  var fastFwdDone = false;
+
+  DWD.$$('#speeds button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (mode) return;
+      speed = +b.dataset.s;
+      DWD.$$('#speeds button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      DWD.sfx.blip();
+    });
+  });
+  function fmt(s) {
+    s = Math.max(0, s);
+    return Math.floor(s / 60) + ':' + ('0' + Math.floor(s % 60)).slice(-2);
+  }
+  // 速いと字幕が化けて読めない
+  function mask(ch) {
+    if (ch === '　' || ch === '。') return ch;
+    var p = speed === 0.5 ? 0 : speed === 1 ? 0.55 : 0.85;
+    return Math.random() < p ? DWD.pick(['▒', '░', '■', '？']) : ch;
+  }
+  var maskCache = {};
+  function play(rev) {
+    if (mode || DWD.isScaring()) return;
+    if (!buf && !build()) { stat.textContent = 'この端末では音声を再生できません（じまくだけ表示します）'; }
+    var ctx = DWD.audio();
+    mode = rev ? 'rev' : 'fwd';
+    maskCache = {};
+    document.getElementById(rev ? 'rev' : 'fwd').classList.add('on');
+    stat.textContent = (rev ? '逆再生' : '再生') + '中 ×' + speed;
+    subt.textContent = '';
+    var real = dur / speed;
+    if (ctx && buf) {
+      src = ctx.createBufferSource();
+      src.buffer = rev ? rbuf : buf;
+      src.playbackRate.value = speed;
+      src.connect(DWD.master());
+      src.start();
+      startAt = ctx.currentTime;
+    } else startAt = performance.now() / 1000;
+    // 逆再生をゆっくり聞くと、声もきこえる（対応端末のみ）
+    if (rev && speed === 0.5) speak();
+    var t0 = performance.now();
+    (function loop() {
+      var el = (performance.now() - t0) / 1000 * speed; // 音声上の経過秒
+      var p = Math.min(1, el / dur);
+      var bufPos = rev ? dur - el : el; // バッファ上の位置
+      headEl.style.left = (p * 100) + '%';
+      tmEl.textContent = fmt(el) + ' / ' + fmt(dur);
+      // 字幕
+      var out = '';
+      if (!rev) {
+        marks.forEach(function (m, i) { if (m.t0 <= bufPos) out += maskCache[i] || (maskCache[i] = mask(m.ch)); });
+      } else {
+        for (var i = marks.length - 1; i >= 0; i--) if (marks[i].t1 >= bufPos) out += maskCache[i] || (maskCache[i] = mask(marks[i].ch));
+      }
+      subt.textContent = out;
+      drawSpec(p, rev);
+      if (p < 1 && mode) { raf = requestAnimationFrame(loop); return; }
+      if (mode) finish(rev);
+    })();
+  }
+  function finish(rev) {
+    var wasSpeed = speed;
+    stop(true);
+    if (rev && wasSpeed === 0.5 && !revSlowDone) {
+      revSlowDone = true;
+      DWD.set('l8heard', true);
+      stat.textContent = '……ずっと　きいてたよ';
+      DWD.sfx.whisper(2);
+      setTimeout(function () { DWD.flash(120, 'girl'); }, 1600);
+    } else if (!rev && wasSpeed === 2 && !fastFwdDone) {
+      fastFwdDone = true;
+      DWD.scare({ type: 'text', text: 'うしろから' });
+    } else if (rev && wasSpeed !== 0.5) {
+      stat.textContent = 'はやすぎて　きこえない';
+    } else if (!rev) {
+      stat.textContent = 'さかさまに　きこえる';
+    }
+  }
+  function stop(keepSub) {
+    if (src) { try { src.stop(); } catch (e) {} src = null; }
+    if (window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) {}
+    cancelAnimationFrame(raf);
+    mode = null;
+    DWD.$$('.ctl button').forEach(function (b) { if (b.id === 'fwd' || b.id === 'rev') b.classList.remove('on'); });
+    if (!keepSub) { subt.textContent = ''; stat.textContent = '停止'; }
+  }
+  function speak() {
+    try {
+      if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+      var voices = speechSynthesis.getVoices() || [];
+      var ja = voices.filter(function (v) { return /^ja/i.test(v.lang); })[0];
+      if (!ja) return;
+      var u = new SpeechSynthesisUtterance(TRUE_TEXT.replace(/　/g, ' '));
+      u.voice = ja; u.lang = 'ja-JP'; u.rate = 0.55; u.pitch = 0.2; u.volume = 0.5;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  document.getElementById('fwd').addEventListener('click', function () { play(false); });
+  document.getElementById('rev').addEventListener('click', function () { play(true); });
+  document.getElementById('stop').addEventListener('click', function () { stop(false); });
+
+  var tries = 0;
+  document.getElementById('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = DWD.norm(document.getElementById('ans').value);
+    if (!v) return;
+    var err = document.getElementById('err');
+    if (v === 'まだいる' || v === 'madairu' || v === 'まだ居る') {
+      stop(true);
+      err.textContent = 'まだ　いるよ';
+      DWD.sfx.knock(3);
+      DWD.reach(9);
+      setTimeout(function () { DWD.go('../9/index.html', 1200); }, 1500);
+      return;
+    }
+    tries++;
+    DWD.inc('miss');
+    if (tries === 2) err.textContent = 'うしろから　ゆっくり　きいて（逆再生・0.5×）';
+    else if (tries % 3 === 0) { DWD.scare({ type: 'eye' }); err.textContent = 'じまくを　うしろから　よんでも　いい'; }
+    else err.textContent = 'ちがう';
+  });
+
+  DWD.gate({ title: 'LAYER 08 に　おりますか', button: 'おりる', warn: '※ 音が手がかりになります（字幕も出ます）' }).then(function () {
+    build();
+    drawSpec(null, false);
+    DWD.drone(0.08);
+    DWD.haunt({ min: 20000, max: 34000, big: false, silent: true, paused: function () { return !!mode; } });
+  });
+})();
+</script>
+</body>
+</html>

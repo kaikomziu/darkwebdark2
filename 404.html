@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>404 Not Found</title>
+<style>
+  body { margin: 0; background: #fff; color: #000; font-family: "Times New Roman", serif; padding: 16px; overflow-x: hidden; }
+  h1 { font-size: 32px; margin: 8px 0; font-weight: bold; }
+  hr { border: 0; border-top: 1px solid #aaa; }
+  address { font-style: italic; font-size: 14px; }
+  a { color: #00e; }
+</style>
+</head>
+<body data-no-cfg>
+<h1 id="h">Not Found</h1>
+<p id="p">The requested URL was not found on this server.</p>
+<hr>
+<address>Apache Server at midorisou Port 203</address>
+<p><a href="/darkwebdark2/index.html" id="home">← ひびログへ</a></p>
+<script>
+// GitHub Pages の 404 ページ。ふつうのエラーページ……に見せかけて、少しだけ
+(function () {
+  setTimeout(function () { document.getElementById('p').textContent = 'The requested URL was not found on this server. 202 と 203 の あいだ にも ありません。'; }, 3000);
+  // サイトの場所が違っても戻れるように
+  var m = location.pathname.match(/^(.*?\/darkwebdark2\/)/);
+  document.getElementById('home').href = m ? m[1] + 'index.html' : '/';
+})();
+</script>
+</body>
+</html>

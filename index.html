@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>まい（@maimai_0612）｜ひびログ</title>
+<meta name="description" content="DarkWebDark 2 ― 前作「DarkWebDark」の続編。ネットサーフィン型ホラー。">
+<link rel="stylesheet" href="assets/hibi.css">
+<style>
+  .cover canvas { image-rendering: pixelated; }
+  .follow-list { list-style: none; margin: 0; padding: 0; }
+  .follow-list li { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #3a3440; }
+  .follow-list .mini { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; flex: none; background: #555; }
+  .follow-list canvas { width: 100%; height: 100%; display: block; }
+  .modal { position: fixed; inset: 0; z-index: 60; background: rgba(10, 8, 14, .9); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal .in { background: #221e28; color: #ddd; border-radius: 14px; padding: 16px; width: min(420px, 100%); max-height: 80vh; overflow: auto; }
+  .modal h3 { margin: 0 0 8px; font-size: 15px; }
+  .endings { list-style: none; padding: 0; margin: 6px 0 0; }
+  .endings li { padding: 4px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  body.warm { background: #fbf3e8; }
+  body.warm::after { display: none; }
+  body.warm .post, body.warm .card { background: #fffaf3; border-color: #f0e2cf; }
+  .cm { border-top: 1px dashed var(--line); margin-top: 8px; padding-top: 6px; font-size: 13px; }
+  .cm b { font-size: 12px; }
+</style>
+</head>
+<body class="cold">
+<header class="topbar">
+  <a class="logo" href="index.html"><i></i>ひびログ</a>
+  <nav>
+    <a href="index.html" class="on">まい</a>
+    <a href="talk.html" data-need="talk">トークル</a>
+    <a href="visit.html" data-need="visit">アルバム</a>
+    <a href="files.html" data-need="files">資料</a>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div id="topCards"></div>
+  <section class="card prof">
+    <div class="cover"><canvas id="cover" width="160" height="40"></canvas></div>
+    <div class="ava"><canvas id="ava"></canvas></div>
+    <h1 id="pname">まい</h1>
+    <div class="id">@maimai_0612</div>
+    <p class="bio" id="bio">カフェで働いてます☕ ねこ派。ゆきとは高校から🌙</p>
+    <div class="stats"><span><b>12</b> フォロー</span><a href="#" id="followers" style="color:inherit;text-decoration:none"><b id="fcount">203</b> フォロワー</a><span id="lastlogin">最終ログイン：たった今</span></div>
+    <div class="banner" id="banner">このアカウントは <b>2026/11/04 02:13</b> から更新されていません</div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tabPosts" class="on">投稿</button>
+    <button type="button" role="tab" id="tabDrafts">下書き<span class="cnt" id="dcnt">0</span></button>
+  </div>
+  <main id="posts"></main>
+  <main id="drafts" class="hidden"></main>
+</div>
+
+<footer class="foot">ひびログ ― 日々を、そっと残す。<div data-dwd-ver="DarkWebDark 2 ／ ひびログ"></div></footer>
+
+<script src="assets/dwd.js"></script>
+<script src="assets/hibi.js"></script>
+<script>
+(function () {
+  'use strict';
+  var postsEl = document.getElementById('posts');
+  var draftsEl = document.getElementById('drafts');
+  var prevName = DWD.prevName();
+  var clears = DWD.get('clears') || 0;
+  var stage = DWD.get('stage');
+
+  HIBI.nav();
+  HIBI.tabHaunt();
+  HIBI.blinker(document.getElementById('ava'), 'mai');
+
+  // カバー画像は砂嵐
+  (function () {
+    var cv = document.getElementById('cover');
+    var c = cv.getContext('2d');
+    var img = c.createImageData(160, 40);
+    setInterval(function () {
+      if (document.hidden) return;
+      for (var i = 0; i < img.data.length; i += 4) {
+        var v = 40 + Math.random() * 90;
+        img.data[i] = v; img.data[i + 1] = v * 0.95; img.data[i + 2] = v * 1.1; img.data[i + 3] = 255;
+      }
+      c.putImageData(img, 0, 0);
+    }, 90);
+  })();
+
+  /* ------------------------------------------------------------
+   * 投稿
+   * ---------------------------------------------------------- */
+  var POSTS = [
+    { tm: '2026/11/04 01:52', body: 'ゆきの部屋、見てくる', photo: 'apart', cap: 'みどり荘。線路のすぐ横', likes: 203, comments: [['203', '02:13', 'まってるね']] },
+    { tm: '2026/11/03 23:41', body: 'ゆきから返信きた。\nでも、ゆきって こんな話し方だっけ。', likes: 3 },
+    { tm: '2026/11/03 12:10', body: 'ゆきの会社に電話した。11/1から無断欠勤してるって。\nゆき、そういうことする子じゃない。', likes: 5 },
+    { tm: '2026/11/02 21:15', body: 'ゆきのブログ更新されてた！！「ただいま！クロも帰ってきました」だって😭😭\nよかった〜〜〜……\n\nでも電話はまだつながらない。', likes: 18 },
+    { tm: '2026/11/01 08:30', body: 'ゆきのブログの最後の記事、なにあれ。\n3時3分って。\n冗談だよね？', likes: 4 },
+    { tm: '2026/10/31 18:00', body: 'ハロウィン🎃 ゆきとかぼちゃプリン食べに行く約束だったのに、既読つかない。', photo: 'pumpkin', cap: 'ひとりで食べた', likes: 9 },
+    { tm: '2026/10/15 22:04', body: '【拡散希望】友だちの猫がいなくなりました。\n黒猫のクロ、3さい、オス。赤い首輪をしています。\n線路沿いの「みどり荘」のあたりです。見かけた方、教えてください🙏', likes: 41 },
+    { tm: '2026/09/28 09:12', body: 'ゆきのブログに変なコメントついてた。\n「コン　コン　コン」だって。いたずらかな。', likes: 6 },
+    { tm: '2026/09/12 19:40', body: 'ゆきのブログで紹介されてた喫茶こもれび、うちのお店の店長も知ってた。\n「あそこのマスター、昔いろいろあった人だよ」って。いろいろって何😶', photo: 'latte', cap: 'ゆきが送ってくれたラテアート', likes: 12 },
+    { tm: '2026/09/03 21:00', body: '親友がブログはじめた〜！🌞\n「ひだまり日記」、みんな見てね。猫がかわいいよ', likes: 27 }
+  ];
+
+  function miniAva(who) {
+    var d = document.createElement('div');
+    d.className = 'mini';
+    var cv = document.createElement('canvas');
+    HIBI.avatar(cv, who, 'normal');
+    d.appendChild(cv);
+    return d;
+  }
+
+  function postEl(p, draft) {
+    var a = document.createElement('article');
+    a.className = 'post' + (draft ? ' draft' : '');
+    var head = document.createElement('div');
+    head.className = 'head';
+    head.appendChild(miniAva(p.who || 'mai'));
+    var meta = document.createElement('div');
+    meta.innerHTML = '<div class="nm"></div><div class="tm"></div>';
+    meta.querySelector('.nm').textContent = p.name || 'まい';
+    meta.querySelector('.tm').textContent = p.tm;
+    head.appendChild(meta);
+    if (draft) {
+      var lb = document.createElement('span');
+      lb.className = 'dlabel';
+      lb.textContent = '下書き';
+      head.appendChild(lb);
+    }
+    a.appendChild(head);
+    var b = document.createElement('div');
+    b.className = 'body';
+    if (p.html) b.innerHTML = p.html; else b.textContent = p.body;
+    a.appendChild(b);
+    if (p.photo) {
+      var cv = document.createElement('canvas');
+      cv.className = 'pic';
+      HIBI.photo(cv, p.photo, p.photoOpt);
+      a.appendChild(cv);
+      var opened = 0;
+      cv.addEventListener('click', function () {
+        opened++;
+        HIBI.viewer(function (big) { HIBI.photo(big, p.photo, p.photoOpt); }, p.cap, function () {
+          // 2回目に開くと、窓の顔が一瞬こちらに
+          if (p.photo === 'apart' && opened === 2) setTimeout(function () { DWD.flash(110); }, 900);
+        });
+      });
+      p.canvas = cv;
+    }
+    if (!draft) {
+      var acts = document.createElement('div');
+      acts.className = 'acts';
+      var like = document.createElement('button');
+      like.type = 'button';
+      like.textContent = '♡ ' + p.likes;
+      like.addEventListener('click', function () {
+        if (like.classList.contains('liked')) return;
+        like.classList.add('liked');
+        like.textContent = '♥ ' + (p.likes + 1);
+        DWD.sfx.blip();
+        setTimeout(function () {
+          HIBI.toast('<b>203</b> さんが あなたの「いいね」を みています');
+          DWD.sfx.knock(1);
+        }, 2200);
+      });
+      acts.appendChild(like);
+      var cm = document.createElement('span');
+      cm.textContent = '💬 ' + (p.comments ? p.comments.length : 0);
+      acts.appendChild(cm);
+      a.appendChild(acts);
+      (p.comments || []).forEach(function (c) {
+        var d = document.createElement('div');
+        d.className = 'cm';
+        d.innerHTML = '<b></b> <span class="small"></span><div></div>';
+        d.querySelector('b').textContent = c[0];
+        d.querySelector('.small').textContent = c[1];
+        d.querySelector('div').textContent = c[2];
+        a.appendChild(d);
+      });
+      p.likeBtn = like;
+    }
+    return a;
+  }
+
+  function renderPosts(list) {
+    postsEl.innerHTML = '';
+    list.forEach(function (p) { postsEl.appendChild(postEl(p)); });
+  }
+
+  /* ------------------------------------------------------------
+   * 下書き（見るたびに増える）
+   * ---------------------------------------------------------- */
+  var layer = DWD.get('layer') || 0;
+  var DRAFTS = [
+    { tm: '11/04 02:13', body: 'くらい' },
+    { tm: '11/04 02:13', body: 'ゆきの　こえが　する。　かべの　むこう' },
+    prevName ? { tm: '11/04 02:13', body: prevName + 'さん。　また　きてくれたんだ。\n203の　すみごこちは　どう？' } : null,
+    clears ? { tm: '11/04 02:13', body: 'ねえ。\nこんどは　こたえないで。　なにも　しないで。\nさいごに　ノックが　きこえても、さわらないで。　それだけで　いい' } : null,
+    { tm: '11/04 02:13', html: 'トークル　みて。　ゆきとの　やりとり、ぜんぶ　のこってる。\nさいごのほう、ゆきじゃない。\n<a href="talk.html">→ トークル</a>', unlock: 'talk' },
+    { tm: '11/04 02:13', need: function () { return HIBI.seen('talk'); }, html: 'アルバムに　しゃしんと　ろくおん　あげた。\nクロに　くびわが　なかった。　あかい　くびわ。\n<a href="visit.html">→ アルバム</a>', unlock: 'visit' },
+    { tm: '11/04 02:13', need: function () { return HIBI.seen('visit'); }, html: 'とおりすがりさんの　かきこみ、みつけた。\nマスターは　しってた。　ぜんぶ　しってた。\n<a href="files.html">→ 資料</a>', unlock: 'files' },
+    { tm: '11/04 02:13', need: function () { return HIBI.seen('files'); }, body: 'ここは　したに　ながい。\nずっと　したまで　へやが　ある。' },
+    { tm: 'たった今', need: function () { return HIBI.seen('files'); }, live: true },
+    { tm: '11/04 02:13', need: function () { return layer >= 6; }, body: 'おりてきてくれたんだ。\nおねがい。　いちばん　したまで　きて。' },
+    { tm: '11/04 02:13', need: function () { return layer >= 10; }, body: 'かべの　なかは　せまい。\n0.9メートル。　みんな　たって　ならんでる。' },
+    { tm: '11/04 02:13', need: function () { return layer >= 13; }, body: 'クロが　まってる。\nあかい　くびわの　ほうの　クロ。' }
+  ].filter(Boolean);
+
+  function draftHTML(d) {
+    if (d.live) {
+      return { tm: 'たった今', body: 'いま　' + DWD.timeStr() + '。\n' + DWD.device() + '　で　みてるの　だれ？' };
+    }
+    return d;
+  }
+  // 次に増やせる下書きがあるか
+  function canGrow() {
+    var n = DWD.get('drafts') || 0;
+    if (n >= DRAFTS.length) return false;
+    var d = DRAFTS[n];
+    return !d.need || d.need();
+  }
+  function grow(silent) {
+    if (!canGrow()) return false;
+    var n = (DWD.get('drafts') || 0) + 1;
+    DWD.set('drafts', n);
+    var d = DRAFTS[n - 1];
+    if (d.unlock) HIBI.unlock(d.unlock);
+    if (!silent) {
+      HIBI.toast('下書きが <b>1件</b> ふえました');
+      DWD.sfx.ping(true);
+    }
+    return true;
+  }
+  function renderDrafts(fresh) {
+    var n = DWD.get('drafts') || 0;
+    document.getElementById('dcnt').textContent = n;
+    draftsEl.innerHTML = '';
+    if (!n) {
+      draftsEl.innerHTML = '<p class="empty-note">下書きはありません</p>';
+      return;
+    }
+    // 新しいものが上
+    for (var i = n - 1; i >= 0; i--) {
+      var d = draftHTML(DRAFTS[i]);
+      var el = postEl({ tm: d.tm, body: d.body, html: d.html ? d.html.replace(/\n/g, '<br>') : null }, true);
+      if (fresh && i === n - 1) el.classList.add('new');
+      draftsEl.appendChild(el);
+    }
+    HIBI.nav();
+  }
+
+  var tabP = document.getElementById('tabPosts');
+  var tabD = document.getElementById('tabDrafts');
+  function showTab(which) {
+    var d = which === 'drafts';
+    tabP.classList.toggle('on', !d);
+    tabD.classList.toggle('on', d);
+    postsEl.classList.toggle('hidden', d);
+    draftsEl.classList.toggle('hidden', !d);
+  }
+  tabP.addEventListener('click', function () { showTab('posts'); });
+  tabD.addEventListener('click', function () {
+    // 下書きを開くたびに、1件ふえる
+    var grew = grow(true);
+    renderDrafts(grew);
+    showTab('drafts');
+    if (grew) DWD.sfx.ping(true);
+    // 3回目に開いたとき、一瞬だけ
+    if (DWD.inc('draftOpens') === 4) setTimeout(function () { DWD.flash(100, 'girl'); }, 1200);
+  });
+
+  // フォロワー一覧
+  document.getElementById('followers').addEventListener('click', function (e) {
+    e.preventDefault();
+    var m = document.createElement('div');
+    m.className = 'modal';
+    var rows = [['yuki', 'ゆき', '@hidamari_yuki'], ['203', '203', '@203'], ['master', '喫茶こもれび', '@komorebi1985'], ['203', '通りすがり', '@tooris_gari']];
+    if (prevName) rows.push(['203', prevName, '203号室']);
+    rows.push(['203', 'あなた', DWD.device()]);
+    m.innerHTML = '<div class="in"><h3>フォロワー 203人</h3><ul class="follow-list"></ul><p class="small" style="color:#888">ほか 197人は　なまえが　ありません</p></div>';
+    var ul = m.querySelector('ul');
+    rows.forEach(function (r) {
+      var li = document.createElement('li');
+      li.appendChild(miniAva(r[0]));
+      var t = document.createElement('div');
+      t.innerHTML = '<b></b><div class="small"></div>';
+      t.querySelector('b').textContent = r[1];
+      t.querySelector('.small').textContent = r[2];
+      li.appendChild(t);
+      ul.appendChild(li);
+    });
+    m.addEventListener('click', function (ev) { if (ev.target === m) m.remove(); });
+    document.body.appendChild(m);
+    DWD.sfx.whisper(1.2);
+  });
+
+  /* ------------------------------------------------------------
+   * RTAモード＋オンラインランキング（1回クリアで解放）
+   * ---------------------------------------------------------- */
+  var topCards = document.getElementById('topCards');
+  function rtaCard() {
+    var box = document.createElement('section');
+    box.className = 'card rta-card';
+    box.id = 'rank';
+    var best = DWD.get('rtaBest');
+    var pending = DWD.get('rtaPending');
+    box.innerHTML =
+      '<h3>RTAモード</h3>' +
+      '<p class="small" style="margin:0 0 10px">「RTA開始」を押した瞬間から、最深部でエンディングが決まるまでのタイムを計ります（どのエンディングでも可）。</p>' +
+      '<div class="rta-row"><button type="button" class="btn2" id="rtaStart">RTA開始</button>' +
+      '<span class="small">自己ベスト <b class="rta-num" id="rtaBest">' + (best ? DWD.fmt(best) : '--:--.--') + '</b></span></div>' +
+      '<form id="rtaForm" hidden style="margin-top:10px">' +
+      '<p style="margin:0 0 6px;font-size:14px">登録できるタイム：<b class="rta-num" id="rtaPend"></b></p>' +
+      '<div class="rta-form"><input class="input2" id="rtaName" maxlength="12" placeholder="ランキングに出す名前" autocomplete="nickname"><button class="btn2" id="rtaSend">登録</button></div>' +
+      '</form>' +
+      '<p class="small" id="rtaMsg" style="margin:8px 0 0;min-height:1.4em"></p>' +
+      '<h3 style="margin-top:12px">オンラインランキング</h3>' +
+      '<ol class="rta-list" id="rtaList"><li class="small">読み込み中…</li></ol>';
+    topCards.appendChild(box);
+    document.getElementById('rtaStart').addEventListener('click', function () {
+      DWD.rtaStart();
+      location.href = 'index.html';
+    });
+    if (pending) {
+      document.getElementById('rtaForm').hidden = false;
+      document.getElementById('rtaPend').textContent = DWD.fmt(pending);
+      document.getElementById('rtaName').value = (DWD.get('name') || prevName || '').slice(0, 12);
+    }
+    if (location.hash === '#rank') setTimeout(function () { box.scrollIntoView({ block: 'start' }); }, 50);
+    initRanking();
+  }
+
+  // ランキングの保存先
+  //  - GitHub Pages などふつうのWebサイト → Supabase（組織外の人も登録できる）
+  //  - claude.ai の公開ページ（外部への通信が禁止）→ claude の共有データベース
+  var SB_URL = 'https://kifnzvktwbomxthzvvgy.supabase.co';
+  // anonキー：公開サイトに載せる前提の読み取り用キー（書き込みは関数経由のみ）
+  var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpZm56dmt0d2JvbXh0aHp2dmd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MzgxMzgsImV4cCI6MjA5MzQxNDEzOH0.M7nXP-u--6J_6rRpgz1cJj21_7KX6MtfTmZy77Xf_IE';
+  var TABLE = 'dwd2_rta_scores';
+  var RPC = 'dwd2_submit_rta';
+  var MIN_MS = 60000, MAX_MS = 3 * 3600000;
+  function rankBackend() {
+    var h = location.hostname;
+    if (location.protocol === 'file:') return 'none';
+    if (/(^|\.)github\.io$/.test(h) || h === 'localhost' || h === '127.0.0.1') return 'supabase';
+    return 'claude';
+  }
+
+  function initRanking() {
+    var list = document.getElementById('rtaList');
+    var msg = document.getElementById('rtaMsg');
+    var form = document.getElementById('rtaForm');
+    var sendBtn = document.getElementById('rtaSend');
+
+    function note(text) {
+      list.innerHTML = '';
+      var li = document.createElement('li');
+      li.className = 'small';
+      li.textContent = text;
+      list.appendChild(li);
+    }
+    // rows: [{name, ms, mine}]（速い順）
+    function showRows(rows) {
+      list.innerHTML = '';
+      var rank = 0;
+      rows.forEach(function (v) {
+        if (typeof v.ms !== 'number' || typeof v.name !== 'string') return;
+        rank++;
+        var li = document.createElement('li');
+        if (v.mine) li.className = 'me';
+        var n = document.createElement('span');
+        n.className = 'rta-rank';
+        n.textContent = rank + '位';
+        var nm = document.createElement('span');
+        nm.className = 'rta-who';
+        nm.textContent = v.name.slice(0, 12) + (v.mine ? '（あなた）' : '');
+        var t = document.createElement('b');
+        t.className = 'rta-num';
+        t.textContent = DWD.fmt(v.ms);
+        li.appendChild(n); li.appendChild(nm); li.appendChild(t);
+        list.appendChild(li);
+      });
+      if (!rank) note('まだ記録がありません。最初の記録を残そう。');
+    }
+    function disableSend(text) {
+      sendBtn.disabled = true;
+      if (!form.hidden && text) msg.textContent = text;
+    }
+    // 送信フォームの共通処理。submitFn(name, ms) は「登録後のベスト(ms)」を返す Promise
+    function bindSubmit(submitFn) {
+      var sending = false;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (sending) return;
+        var ms = DWD.get('rtaPending');
+        var name = document.getElementById('rtaName').value.trim().slice(0, 12);
+        if (!name) { msg.textContent = '名前を入れてください。'; return; }
+        if (typeof ms !== 'number' || ms < MIN_MS || ms > MAX_MS) { msg.textContent = 'このタイムは登録できません。'; return; }
+        sending = true;
+        sendBtn.disabled = true;
+        msg.textContent = '登録中…';
+        submitFn(name, Math.round(ms)).then(function (best) {
+          msg.textContent = typeof best === 'number' && best < ms
+            ? '登録済みのタイム（' + DWD.fmt(best) + '）の方が速いので、タイムはそのままにしました。'
+            : '登録しました！';
+          DWD.set('name', name);
+          DWD.set('rtaPending', null);
+          form.hidden = true;
+        }).catch(function (err) {
+          msg.textContent = (err && err.userMessage) || '登録できませんでした。時間をおいてもう一度試してください。';
+          sendBtn.disabled = false;
+        }).then(function () { sending = false; });
+      });
+    }
+
+    var backend = rankBackend();
+    if (backend === 'supabase') return supabaseRanking();
+    if (backend === 'claude') return claudeRanking();
+    note('オンラインランキングは、公開サイトで開いたときに使えます。');
+    disableSend();
+
+    /* ---- Supabase ---- */
+    function supabaseRanking() {
+      // ブラウザごとの匿名ID（1人1件の記録に使う）
+      var pid = DWD.get('pid');
+      if (typeof pid !== 'string' || pid.length < 16) {
+        var a = new Uint8Array(16);
+        (window.crypto || window.msCrypto).getRandomValues(a);
+        pid = Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        DWD.set('pid', pid);
+      }
+      function api(path, opt) {
+        opt = opt || {};
+        var ctrl = window.AbortController ? new AbortController() : null;
+        var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 10000);
+        return fetch(SB_URL + path, {
+          method: opt.method || 'GET',
+          headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+          body: opt.body ? JSON.stringify(opt.body) : undefined,
+          signal: ctrl ? ctrl.signal : undefined
+        }).then(function (r) {
+          clearTimeout(timer);
+          if (!r.ok) { var e = new Error('http ' + r.status); e.status = r.status; throw e; }
+          return r.json();
+        }, function (e) { clearTimeout(timer); throw e; });
+      }
+      function load() {
+        return api('/rest/v1/' + TABLE + '?select=player_id,name,ms&order=ms.asc,updated_at.asc&limit=50').then(function (rows) {
+          showRows((Array.isArray(rows) ? rows : []).map(function (r) {
+            return { name: r.name, ms: r.ms, mine: r.player_id === pid };
+          }));
+        }).catch(function (e) {
+          note(e && e.status === 404 ? 'ランキングは準備中です。' : 'ランキングを読み込めませんでした。通信状況を確認してください。');
+        });
+      }
+      load();
+      setInterval(load, 60000);
+      bindSubmit(function (name, ms) {
+        return api('/rest/v1/rpc/' + RPC, {
+          method: 'POST',
+          body: { p_player: pid, p_name: name, p_ms: ms, p_ver: DWD.VERSION }
+        }).then(function (best) {
+          load();
+          return best;
+        });
+      });
+    }
+
+    /* ---- claude.ai の共有データベース ---- */
+    function claudeRanking() {
+      var tries = 0;
+      (function waitClaude() {
+        if (window.claude && typeof window.claude.use === 'function') return connect();
+        if (++tries > 30) { note('ランキングを読み込めませんでした。'); return disableSend(); }
+        setTimeout(waitClaude, 100);
+      })();
+      function connect() {
+        Promise.all([window.claude.use('db'), window.claude.use('user')]).then(function (r) {
+          var db = r[0], user = r[1];
+          if (!db) { note('ランキングを読み込めませんでした（claude.ai にサインインすると表示されます）。'); return disableSend(); }
+          return (user ? user.id() : Promise.resolve(null)).then(function (uid) {
+            var loading = setTimeout(function () {
+              if (list.querySelector('li.small')) note('ランキングにまだ接続できません。しばらくしてから開き直してください。');
+            }, 10000);
+            db.collection('rta2').orderBy('ms').limit(50).onSnapshot(function (snap) {
+              if (!snap.metadata.fromCache) clearTimeout(loading);
+              showRows(snap.docs.map(function (d) {
+                var v = d.data() || {};
+                return { name: v.name, ms: v.ms, mine: !!uid && d.id === uid };
+              }));
+            }, function () {
+              clearTimeout(loading);
+              note('ランキングを読み込めませんでした。');
+            });
+            if (!uid) return disableSend('ランキングに登録するには claude.ai へのサインインが必要です。');
+            bindSubmit(function (name, ms) {
+              var ref = db.doc('rta2/' + uid);
+              return ref.get().then(function (cur) {
+                var old = cur.exists ? cur.data() : null;
+                if (old && typeof old.ms === 'number' && old.ms <= ms) return old.ms;
+                return ref.set({ name: name, ms: ms, at: new Date().toISOString(), ver: DWD.VERSION }).then(function () { return ms; });
+              }).catch(function (err) {
+                var e = new Error('db');
+                if (err && err.code === 'invalid_argument') e.userMessage = 'この共有設定では登録できません（閲覧のみの権限です）。';
+                throw e;
+              });
+            });
+          });
+        }).catch(function () {
+          note('ランキングを読み込めませんでした。');
+          disableSend();
+        });
+      }
+    }
+  }
+
+  // 見たエンディング
+  var END_NAMES = { 1: 'END1「ただいま」', 2: 'END2「こたえない」', 3: 'END3「おかえり、はるか」' };
+  function endingsCard() {
+    var seen = DWD.get('endings') || [];
+    var box = document.createElement('section');
+    box.className = 'card';
+    var html = '<h3 style="margin:0 0 6px;font-size:15px">見たおわり（' + seen.length + ' / 3）</h3><ul class="endings">';
+    [1, 2, 3].forEach(function (n) {
+      html += '<li>' + (seen.indexOf(n) >= 0 ? END_NAMES[n] : '？？？') + '</li>';
+    });
+    html += '</ul>';
+    html += '<p style="margin:12px 0 0"><button type="button" class="btn2 red" id="resetBtn">さいしょから</button> <span class="small">進行状況を消します（RTA・見たおわりは残ります）</span></p>';
+    box.innerHTML = html;
+    topCards.appendChild(box);
+    document.getElementById('resetBtn').addEventListener('click', function () {
+      DWD.reset();
+      location.href = 'index.html';
+    });
+  }
+
+  /* ------------------------------------------------------------
+   * END1「ただいま」の舞台
+   * ---------------------------------------------------------- */
+  if (stage === 'end1') {
+    DWD.gate({ title: '……　まぶしい', button: 'めを　あける' }).then(end1);
+    return;
+  }
+  function end1() {
+    document.body.classList.remove('cold');
+    document.body.classList.add('warm');
+    var banner = document.getElementById('banner');
+    banner.innerHTML = 'おかえりなさい。<b>2026/11/05</b> に更新されました';
+    document.getElementById('bio').textContent = 'カフェで働いてます☕ ねこ派。ゆきとは高校から🌙　ただいま！';
+    var happy = { tm: '2026/11/05 12:13', body: 'ゆき、かえってきた！！！！😭😭😭\nこもれびでナポリタン食べたよ🍝\n心配してくれたみんな、ほんとうにありがとう。\nもう大丈夫。ぜんぶ、おわったよ。', photo: 'cafe2', cap: 'ゆきと。こもれびで', likes: 2, photoOpt: {} };
+    renderPosts([happy].concat(POSTS));
+    DWD.sfx.chime();
+    setTimeout(function () { HIBI.toast('<b>ゆき</b> さんが いいね しました'); DWD.sfx.chime(); if (happy.likeBtn) happy.likeBtn.textContent = '♡ 3'; }, 1800);
+    setTimeout(function () { HIBI.toast('<b>喫茶こもれび</b> さんが いいね しました'); if (happy.likeBtn) happy.likeBtn.textContent = '♡ 4'; }, 4200);
+    var started = false;
+    function finale() {
+      if (started) return;
+      started = true;
+      var who = DWD.who();
+      DWD.sfx.heartbeat(4, 0.8);
+      setTimeout(function () {
+        // 写真の二人の目が黒くなる
+        HIBI.photo(happy.canvas, 'cafe2', { black: true });
+        DWD.sfx.blip();
+        HIBI.toast('<b>203</b> さんが いいね しました');
+        if (happy.likeBtn) happy.likeBtn.textContent = '♡ 203';
+      }, 1600);
+      setTimeout(function () {
+        document.body.classList.remove('warm');
+        document.body.classList.add('cold');
+        DWD.sfx.whisper(2);
+        var bodyEl = happy.canvas.parentNode.querySelector('.body');
+        bodyEl.textContent = 'ゆきは　でてきた。\nまいも　でてきた。\nクロも　でてきた。';
+      }, 3600);
+      setTimeout(function () {
+        var bodyEl = happy.canvas.parentNode.querySelector('.body');
+        bodyEl.innerHTML = '';
+        var t = document.createElement('span');
+        t.className = 'redtext';
+        t.textContent = 'じゃあ　かべの　なかには　だれが　いるの？';
+        bodyEl.appendChild(t);
+        DWD.sfx.stinger();
+        document.getElementById('banner').innerHTML = '';
+        var b2 = document.createElement('span');
+        b2.textContent = 'このアカウントは　いま　' + who + '　が　つかっています';
+        document.getElementById('banner').appendChild(b2);
+        document.getElementById('pname').textContent = who;
+      }, 6200);
+      setTimeout(function () {
+        document.body.classList.add('dwd-shake');
+        DWD.sfx.knock(3, 0.2);
+      }, 8600);
+      setTimeout(function () {
+        document.body.classList.remove('dwd-shake');
+        DWD.scare({ type: 'crawl' }).then(function () {
+          return DWD.scare({ type: 'text', text: 'つぎは　あなたが　ノックする', dur: 1400 });
+        }).then(function () {
+          DWD.set('stage', null);
+          DWD.go('end.html?e=1', 700);
+        });
+      }, 10000);
+    }
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest('a');
+      if (a) e.preventDefault();
+      if (e.target.closest('.dwd-cfg, .dwd-cfgp, .viewer')) return;
+      finale();
+    }, true);
+    setTimeout(finale, 9000);
+  }
+
+  /* ------------------------------------------------------------
+   * ふだんの表示
+   * ---------------------------------------------------------- */
+  var cleared = DWD.get('cleared');
+  if (cleared || (DWD.get('rtaUnlocked') && !DWD.rtaRunning())) rtaCard();
+  if (cleared || clears) endingsCard();
+  if (clears && !cleared) {
+    document.getElementById('banner').innerHTML = 'おかえりなさい。　また　<b>203</b>　の　となりへ';
+  }
+  if (prevName) document.getElementById('fcount').textContent = '204';
+
+  renderPosts(POSTS);
+  var visits = HIBI.visit('index');
+  renderDrafts(false);
+
+  // 最初の画面の注意（音を鳴らすための入口ボタンをかねる）
+  var warn =
+    '※ このゲームには<b style="color:#e55">大きな音・突然の驚かし（ジャンプスケア）・点滅する表現</b>があります。<br>' +
+    'イヤホン・音量にご注意ください。下の設定で点滅と揺れを弱められます（あとから左下の⚙でも変更できます）。<br><br>' +
+    '前作「DarkWebDark」の続編です。前作を遊んでいなくても楽しめます。<br>スマホ・PC 両対応。1周 40〜60分ほど。進行状況はブラウザに自動で保存されます。';
+  var title = 'まい　の　ページを　ひらきますか';
+  if (prevName && DWD.prevCleared() && visits === 1) title = 'おかえりなさい、' + prevName + '。\nまた　ノックが　きこえましたか';
+  DWD.gate({ title: title, button: 'ひらく', warn: warn, settings: true }).then(function () {
+    DWD.roomTone(0.07);
+    // 2回目以降の訪問で、下書きが勝手に1件ふえる
+    if (visits > 1 && grow(false)) renderDrafts(true);
+    // 最初の不気味な一押し
+    setTimeout(function () {
+      DWD.sfx.buzz(2);
+      HIBI.toast('<b>203</b> さんが「ゆきの部屋、見てくる」に いいね しました');
+      if (POSTS[0].likeBtn) POSTS[0].likeBtn.textContent = '♡ 204';
+    }, 4000);
+    setTimeout(function () {
+      if ((DWD.get('drafts') || 0) === 0) {
+        HIBI.toast('まい さんが <b>下書き</b> を 保存しました');
+        DWD.sfx.ping(true);
+        document.getElementById('dcnt').textContent = '1';
+      }
+    }, 9000);
+    // 最終ログインがじわじわ変わる
+    var ll = document.getElementById('lastlogin');
+    setInterval(function () { ll.textContent = '最終ログイン：' + DWD.clock(new Date(), true) + '（' + DWD.device() + '）'; }, 1000);
+    // まれに怪現象（大きな驚かしはなし）
+    DWD.haunt({ min: 20000, max: 40000, big: false, textSel: '.post .body', paused: function () { return !!document.querySelector('.viewer,.modal'); } });
+  });
+})();
+</script>
+</body>
+</html>

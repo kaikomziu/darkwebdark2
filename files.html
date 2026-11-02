@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>資料｜ひびログ</title>
+<link rel="stylesheet" href="assets/hibi.css">
+<style>
+  .ftabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 14px 0 0; }
+  .ftabs button { border: 1px solid var(--line); background: #fff; border-radius: 10px 10px 0 0; padding: 8px 2px; font-size: 12px; cursor: pointer; min-height: 44px; line-height: 1.3; color: var(--ink); }
+  .ftabs button.on { background: #2a2630; color: #fff; border-color: #2a2630; }
+  .ftabs button .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--red); margin-left: 3px; vertical-align: 2px; }
+  .pane { border: 1px solid var(--line); border-radius: 0 0 12px 12px; overflow: hidden; }
+  /* こもれびの古いホームページ（2003年ごろ） */
+  .old { background: #f3ecd8; color: #3b2a12; font-family: "MS PGothic", "Osaka", "Hiragino Kaku Gothic ProN", sans-serif; padding: 14px; font-size: 14px; }
+  .old h2 { text-align: center; color: #6b3a10; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; margin: 6px 0; font-size: 24px; letter-spacing: .2em; }
+  .old .marq { background: #6b3a10; color: #fff3d0; font-size: 13px; padding: 2px 0; overflow: hidden; white-space: nowrap; }
+  .old .marq span { display: inline-block; padding-left: 100%; animation: marq 16s linear infinite; }
+  @keyframes marq { to { transform: translateX(-100%); } }
+  .old a { color: #0000cc; }
+  .old .counter { font-family: "Courier New", monospace; background: #000; color: #0f0; padding: 0 6px; letter-spacing: .2em; cursor: pointer; }
+  .old table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13px; }
+  .old td { border: 1px solid #c8b890; padding: 4px 6px; }
+  .old .ura { color: #f3ecd8; transition: color 1.6s; }
+  .old .ura.show { color: #a0101a; }
+  .old hr { border: 0; border-top: 2px dotted #c8a870; }
+  .old canvas { display: block; width: min(320px, 100%); margin: 8px auto; border: 6px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  /* 掲示板 */
+  .bbs { background: #efefef; color: #000; font-family: "MS PGothic", "Osaka", "Hiragino Kaku Gothic ProN", sans-serif; padding: 12px; font-size: 14px; }
+  .bbs h2 { color: #c00; font-size: 17px; margin: 0 0 10px; }
+  .bbs dt { margin-top: 10px; font-size: 13px; }
+  .bbs dt b { color: #228b22; }
+  .bbs dd { margin: 2px 0 0 1em; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .bbs .new { animation: newpost 2s ease; }
+  @keyframes newpost { from { background: #ffd0d0; } to { background: transparent; } }
+  /* 新聞 */
+  .news { background: #f6f2e8; color: #111; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; padding: 16px; }
+  .news .paper { font-size: 12px; color: #555; border-bottom: 3px double #333; padding-bottom: 4px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+  .news h2 { font-size: clamp(20px, 6vw, 28px); margin: 10px 0 2px; line-height: 1.3; }
+  .news h3 { font-size: 15px; margin: 0 0 10px; color: #333; }
+  .news p { text-indent: 1em; line-height: 1.95; margin: 6px 0; font-size: 15px; }
+  .news figure { margin: 10px auto; width: min(240px, 100%); text-align: center; }
+  .news figure canvas { width: 100%; filter: grayscale(1) contrast(1.1); cursor: zoom-in; }
+  .news figcaption { font-size: 12px; color: #444; }
+  /* 物件 */
+  .estate { background: #fff; color: #222; padding: 14px; font-size: 14px; }
+  .estate h2 { font-size: 17px; margin: 0 0 8px; color: #0a6a3a; }
+  .estate table { width: 100%; border-collapse: collapse; }
+  .estate th, .estate td { border-bottom: 1px solid #e3e3e3; padding: 6px 4px; text-align: left; vertical-align: top; }
+  .estate th { width: 7em; color: #666; font-weight: normal; }
+  .estate .tag { display: inline-block; background: #e8f5ee; color: #0a6a3a; border-radius: 4px; padding: 0 6px; font-size: 12px; margin: 2px 4px 2px 0; }
+  .estate .red { color: #c00; font-weight: bold; }
+  /* 偽クラッシュ */
+  .crash { position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, .45); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .crash .dlg { background: #fff; color: #222; width: min(380px, 100%); border-radius: 8px; padding: 18px; box-shadow: 0 10px 40px rgba(0,0,0,.4); font-family: system-ui, sans-serif; }
+  .crash .dlg h4 { margin: 0 0 8px; font-size: 16px; }
+  .crash .dlg p { margin: 0 0 14px; font-size: 13px; color: #555; }
+  .crash .dlg .bs { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  .crash .dlg button { border: 1px solid #ccc; background: #f4f4f4; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+  .crash .dlg button.p { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+  body.frozen .wrap { filter: grayscale(.8) brightness(.9); pointer-events: none; }
+  .dwdlink { display: block; margin: 12px 0 4px; padding: 12px; background: #000; color: #e22 !important; text-align: center; font-family: "Courier New", monospace; letter-spacing: .2em; text-decoration: none; border: 1px solid #600; }
+</style>
+</head>
+<body class="cold">
+<header class="topbar">
+  <a class="logo" href="index.html"><i></i>ひびログ</a>
+  <nav>
+    <a href="index.html">まい</a>
+    <a href="talk.html" data-need="talk">トークル</a>
+    <a href="visit.html" data-need="visit">アルバム</a>
+    <a href="files.html" class="on">資料</a>
+  </nav>
+</header>
+<div class="wrap">
+  <p class="small" style="margin:14px 0 0">まい がブックマークした資料（4件）</p>
+  <div class="ftabs" id="ftabs">
+    <button type="button" data-p="cafe">喫茶こもれび<br>旧ホームページ</button>
+    <button type="button" data-p="bbs">地域掲示板<br>みどり荘スレ</button>
+    <button type="button" data-p="news">新聞記事<br>1998年</button>
+    <button type="button" data-p="room">物件情報<br>202号室</button>
+  </div>
+  <div class="pane" id="pane"></div>
+</div>
+<footer class="foot"><div data-dwd-ver="DarkWebDark 2 ／ ひびログ"></div></footer>
+
+<!-- 各資料の中身 -->
+<template id="t-cafe">
+  <div class="old">
+    <div class="marq"><span>★☆ いらっしゃいませ 喫茶こもれび のホームページへようこそ ☆★ ナポリタン はじめました ★☆ 毎年11月4日は お休みをいただきます ☆★</span></div>
+    <h2 id="cafeTitle">喫茶 こもれび</h2>
+    <p style="text-align:center;margin:0">since 1985 ／ 駅前通り</p>
+    <p style="text-align:center">あなたは <span class="counter" id="counter">000203</span> 人目のお客様です</p>
+    <hr>
+    <div id="cafeNews"></div>
+    <b>■ 店主のことば</b>
+    <p id="words">いらっしゃいませ。店主の 間宮 宗一 です。<br>
+    1985年から、駅前で小さな喫茶店をやっています。<br>
+    コーヒーは一杯ずつ、ネルでいれています。<br>
+    娘が好きだったナポリタンは、いまもメニューにあります。<br>
+    娘はいま、少し遠いところにいます。<br>
+    <span class="ura" id="ura">はるか　かえっておいで　へやは　そのまま　にしてあるよ　だれかが　こたえれば　おまえは　でられる</span></p>
+    <hr>
+    <b>■ メニュー</b>
+    <table>
+      <tr><td>ブレンド</td><td>350円</td></tr>
+      <tr><td>カフェラテ（ラテアートつき）</td><td>450円</td></tr>
+      <tr><td>ナポリタン</td><td>600円</td></tr>
+      <tr><td>はるかのプリン</td><td>（休止中）</td></tr>
+    </table>
+    <b>■ おしらせ</b>
+    <p>・毎年 11月4日 は、お休みをいただきます。<br>・アパート「みどり荘」の入居のご相談も、店主までどうぞ。</p>
+    <p class="small" style="color:#8a7a5a">最終更新日：2003年2月13日 ／ リンクフリー ／ 相互リンク募集中</p>
+  </div>
+</template>
+
+<template id="t-bbs">
+  <div class="bbs">
+    <h2>【地域】線路沿いのみどり荘ってどうなの？</h2>
+    <dl id="thread">
+      <dt>1 ：<b>名無しさん</b>：2019/06/02(日) 21:10</dt><dd>駅から徒歩8分で家賃2万ちょっと。安すぎない？</dd>
+      <dt>2 ：<b>名無しさん</b>：2019/06/02(日) 21:33</dt><dd>あそこ昔、女子大生が行方不明になったとこでしょ。1998年だっけ</dd>
+      <dt>3 ：<b>名無しさん</b>：2019/06/02(日) 22:01</dt><dd>203号室な。いまも空き部屋らしい</dd>
+      <dt>4 ：<b>202の住人</b>：2019/06/10(月) 02:40</dt><dd>いま202に住んでます。
+夜中の2時13分に、203側の壁をノックされる。3回。毎晩。</dd>
+      <dt>5 ：<b>名無しさん</b>：2019/06/10(月) 07:12</dt><dd>こたえてみたら？ｗ</dd>
+      <dt>6 ：<b>202の住人</b>：2019/06/11(火) 01:58</dt><dd>返事したらダメな気がする。なんとなく。</dd>
+      <dt>7 ：<b>名無しさん</b>：2019/06/15(土) 18:20</dt><dd>大家って駅前の喫茶店のじいさんだよね。
+203の家賃は大家が自分で払い続けてるって聞いた。だから203には誰も入れない</dd>
+      <dt>8 ：<b>202の住人</b>：2019/07/21(日) 23:50</dt><dd>大家さんに相談した。
+「返事は、してみたかい」って聞かれた。
+してませんって言ったら、すごく残念そうな顔をされた。</dd>
+      <dt>9 ：<b>名無しさん</b>：2019/07/21(日) 23:59</dt><dd>こわ</dd>
+      <dt>10 ：<b>202の住人</b>：2019/09/01(日) 12:00</dt><dd>引っ越しました。結局一度も返事しなかった。
+最後の夜、ノックのあとに声がした。「みずのさん」って。
+名前、教えてないのに。</dd>
+      <dt>11 ：<b>名無しさん</b>：2019/09/01(日) 12:31</dt><dd>本名出てて草</dd>
+      <dt>12 ：<b>通りすがり</b>：2026/09/28(月) 03:01</dt><dd>202に新しい人が入ったみたい。ブログやってる。コメントで忠告しといた。
+（元202の住人です）</dd>
+      <dt>13 ：<b>通りすがり</b>：2026/10/15(木) 08:44</dt><dd>返事しちゃったらしい。間に合わなかった。</dd>
+      <dt>14 ：<b>通りすがり</b>：2026/11/04(水) 03:10</dt><dd>もうひとり。その子の友だち。
+止めようとして、みどり荘まで行った。階段の下で見てた。
+あの子は、自分から壁に入っていった。</dd>
+    </dl>
+  </div>
+</template>
+
+<template id="t-news">
+  <div class="news">
+    <div class="paper"><span>■■新聞　地域面</span><span>1998年（平成10年）11月5日　木曜日</span></div>
+    <h2>アパートの女子大生 行方不明</h2>
+    <h3>部屋は内側から施錠</h3>
+    <p>4日未明、■■市のアパート「みどり荘」203号室に住む大学生、<b>間宮はるかさん（19）</b>と連絡が取れなくなったと、父親で喫茶店を営む宗一さん（50）が警察に届け出た。</p>
+    <p>警察によると、部屋は内側から鍵とチェーンがかけられ、窓も施錠されていた。室内には飲みかけのコーヒーが残され、隣の202号室側の壁には、つめでひっかいたような跡が多数あった。</p>
+    <p>202号室は当時空き部屋で、201号室の住人は「夜中の2時すぎに、壁をノックするような音を3回聞いた。そのあと、女の人が『はい』と返事をする声がした」と話している。</p>
+    <p>警察は事件と事故の両面で調べている。</p>
+    <figure><canvas id="harukaPic"></canvas><figcaption>間宮はるかさん（家族提供）</figcaption></figure>
+  </div>
+</template>
+
+<template id="t-room">
+  <div class="estate">
+    <h2>みどり荘 202号室　<span class="red">入居者募集中</span></h2>
+    <p><span class="tag">駅徒歩8分</span><span class="tag">線路沿い</span><span class="tag">日当たり良好</span><span class="tag">ペット相談可</span></p>
+    <table>
+      <tr><th>賃料</th><td><b>21,000円</b>（管理費なし）</td></tr>
+      <tr><th>間取り</th><td>1K（6帖）</td></tr>
+      <tr><th>築年</th><td>1981年（築45年）</td></tr>
+      <tr><th>所在階</th><td>2階 ／ 2階建て</td></tr>
+      <tr><th>管理</th><td>大家直接管理（間宮）</td></tr>
+      <tr><th>備考</th><td>隣室（203）は倉庫として使用しています。<br>夜間の物音について、気になる方はご遠慮ください。<br>前の入居者の荷物は、そのままです。</td></tr>
+      <tr><th>情報更新</th><td id="estUpd">2026/11/05 02:13</td></tr>
+    </table>
+    <p class="small" style="color:#888">※ この物件は、ノックにこたえられる方におすすめです。</p>
+  </div>
+</template>
+
+<script src="assets/dwd.js"></script>
+<script src="assets/hibi.js"></script>
+<script>
+(function () {
+  'use strict';
+  HIBI.nav();
+  HIBI.tabHaunt();
+  var pane = document.getElementById('pane');
+  var tabs = DWD.$$('#ftabs button');
+  var seen = DWD.get('fileTabs') || {};
+  var stage = DWD.get('stage');
+  var crashed = !!DWD.get('filesDone');
+  var startedAt = Date.now();
+  var cur = null;
+
+  function markDots() {
+    tabs.forEach(function (b) {
+      var p = b.dataset.p;
+      var dot = b.querySelector('.dot');
+      if (!seen[p] && !dot) { dot = document.createElement('span'); dot.className = 'dot'; b.appendChild(dot); }
+      if (seen[p] && dot) dot.remove();
+    });
+  }
+
+  function show(p) {
+    cur = p;
+    tabs.forEach(function (b) { b.classList.toggle('on', b.dataset.p === p); });
+    pane.innerHTML = '';
+    pane.appendChild(document.getElementById('t-' + p).content.cloneNode(true));
+    seen[p] = true;
+    DWD.set('fileTabs', seen);
+    markDots();
+    DWD.sfx.blip();
+    if (p === 'cafe') setupCafe();
+    if (p === 'news') setupNews();
+    if (p === 'bbs' && crashed) addFinalPost(false);
+    if (p === 'room') document.getElementById('estUpd').textContent = '2026/11/05 02:13（' + DWD.today() + ' 再更新）';
+    window.scrollTo(0, 0);
+  }
+
+  // 店主のことば：白い文字（なぞる・3回タップで見える）
+  function setupCafe() {
+    var taps = 0;
+    var words = document.getElementById('words');
+    words.addEventListener('click', function () {
+      taps++;
+      if (taps === 3) {
+        document.getElementById('ura').classList.add('show');
+        DWD.sfx.whisper(2);
+      }
+    });
+    document.getElementById('counter').addEventListener('click', function () {
+      this.textContent = '000204';
+      DWD.sfx.knock(1);
+    });
+  }
+  var newsOpen = 0;
+  function setupNews() {
+    var cv = document.getElementById('harukaPic');
+    HIBI.photo(cv, 'haruka', {});
+    cv.addEventListener('click', function () {
+      newsOpen++;
+      // 2回目に開くと、写真の顔が……
+      HIBI.viewer(function (big) { HIBI.photo(big, 'haruka', { scratch: newsOpen >= 2, black: newsOpen >= 3 }); }, '間宮はるかさん（家族提供）', function () {
+        if (newsOpen === 3) setTimeout(function () { DWD.flash(120, 'girl'); }, 800);
+      });
+    });
+  }
+
+  // 掲示板の最後の書き込み（DarkWebDark への入口）
+  function addFinalPost(fresh) {
+    var th = document.getElementById('thread');
+    if (!th || th.querySelector('.final')) return;
+    var dt = document.createElement('dt');
+    dt.className = 'final' + (fresh ? ' new' : '');
+    dt.innerHTML = '15 ：<b>通りすがり</b>：2026/11/05(木) 02:13';
+    var dd = document.createElement('dd');
+    dd.className = fresh ? 'new' : '';
+    dd.textContent = 'まいさんのページを見ている人へ。\n\n' +
+      '「DarkWebDark」という裏サイトがある。ゆきさんのブログの奥にあったやつ。\n' +
+      'あそこの いちばん下に、202と203の「あいだ」がある。まいさんはそこにいる。ゆきさんも。ほかの人も。\n' +
+      '入口は LAYER 01 の、うらがわ。\n\n' +
+      '大家（間宮さん）の台帳に、ぜんぶ書いてある。ログインには、ゆきさんの部屋番号と、ノックの時刻と、大家の名字が要るはず。\n\n' +
+      'ひとつだけ。かべの中で、こたえたら、あなたも はいる。';
+    var a = document.createElement('a');
+    a.className = 'dwdlink';
+    a.href = 'dwd/6/index.html';
+    a.textContent = 'DarkWebDark ／ LAYER 06 ▶';
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      DWD.go(a.getAttribute('href'), 900);
+    });
+    dd.appendChild(a);
+    th.appendChild(dt);
+    th.appendChild(dd);
+    if (fresh) setTimeout(function () { dd.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300);
+  }
+
+  // すべての資料を見たあと、ページが「応答しなくなる」
+  function maybeCrash() {
+    if (crashed) return false;
+    var all = ['cafe', 'bbs', 'news', 'room'].every(function (k) { return seen[k]; });
+    if (!all || Date.now() - startedAt < 15000 * DWD.speed()) return false;
+    crashed = true;
+    document.body.classList.add('frozen');
+    DWD.sfx.static(0.3, 0.2);
+    setTimeout(function () {
+      var c = document.createElement('div');
+      c.className = 'crash';
+      c.innerHTML = '<div class="dlg"><h4>このページは応答していません</h4><p>ページが応答するまで待つか、ページを閉じることができます。</p><div class="bs"><button type="button" data-a="wait">待つ</button><button type="button" class="p" data-a="close">ページを閉じる</button></div></div>';
+      document.body.appendChild(c);
+      c.addEventListener('click', function (e) {
+        var b = e.target.closest('button');
+        if (!b) return;
+        c.remove();
+        DWD.scare({ type: 'hands', dur: 1300 }).then(function () {
+          document.body.classList.remove('frozen');
+          DWD.set('filesDone', true);
+          HIBI.unlock('dwd');
+          show('bbs');
+          addFinalPost(true);
+          DWD.sfx.knock(3);
+        });
+      });
+    }, 1200);
+    return true;
+  }
+
+  tabs.forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (DWD.isScaring() || document.body.classList.contains('frozen')) return;
+      if (maybeCrash()) return;
+      show(b.dataset.p);
+    });
+  });
+
+  /* ------------------------------------------------------------
+   * END3「おかえり、はるか」の舞台
+   * ---------------------------------------------------------- */
+  if (stage === 'end3') {
+    show('cafe');
+    DWD.gate({ title: '……　コーヒーの　におい', button: 'めを　あける' }).then(end3);
+    return;
+  }
+  function end3() {
+    document.body.classList.remove('cold');
+    var news = document.getElementById('cafeNews');
+    news.innerHTML = '<b style="color:#a0101a">■ 2026年11月5日　おしらせ</b><p>28年ぶりに、娘の はるか が帰ってきました。<br>今日から、娘とふたりでお店に立ちます。<br>はるかのプリンも、再開します。<br>みなさま、本当にありがとうございました。</p>';
+    var cv = document.createElement('canvas');
+    HIBI.photo(cv, 'haruka', { nostamp: true });
+    news.appendChild(cv);
+    var cap = document.createElement('p');
+    cap.style.textAlign = 'center';
+    cap.textContent = '（店主と、はるか）';
+    news.appendChild(cap);
+    document.getElementById('ura').textContent = 'まいさん　すまない';
+    DWD.sfx.chime();
+    var started = false;
+    function finale() {
+      if (started) return;
+      started = true;
+      DWD.sfx.heartbeat(4, 0.8);
+      setTimeout(function () {
+        cap.textContent = 'はるかは　19さいの　まま　でした';
+        DWD.sfx.whisper(2);
+      }, 1500);
+      setTimeout(function () {
+        HIBI.photo(cv, 'haruka', { nostamp: true, black: true });
+        DWD.sfx.blip();
+        document.getElementById('ura').classList.add('show');
+      }, 3200);
+      setTimeout(function () {
+        var p = document.createElement('p');
+        p.style.color = '#a0101a';
+        p.textContent = 'かえってきた　はるかは　コーヒーを　のまない。　ずっと　かべを　みている。';
+        news.appendChild(p);
+        DWD.sfx.stinger();
+      }, 5200);
+      setTimeout(function () {
+        var p = document.createElement('p');
+        p.style.color = '#a0101a';
+        p.textContent = 'かわりに　はいったのは　' + DWD.who() + '。　203号室の　かぎは　あいています。';
+        news.appendChild(p);
+        document.getElementById('cafeTitle').textContent = '喫茶 こもれび（休業中）';
+        document.getElementById('counter').textContent = '000001';
+      }, 7400);
+      setTimeout(function () {
+        DWD.scare({ type: 'girl', dur: 1500 }).then(function () {
+          DWD.set('stage', null);
+          DWD.go('end.html?e=3', 700);
+        });
+      }, 9800);
+    }
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.dwd-cfg, .dwd-cfgp')) return;
+      finale();
+    }, true);
+    setTimeout(finale, 8000);
+  }
+
+  /* ---- ふだん ---- */
+  HIBI.visit('files');
+  HIBI.unlock('files');
+  markDots();
+  show('bbs');
+  DWD.gate({ title: 'ブックマークした資料を　ひらきますか', button: 'ひらく', warn: '上のタブで資料を切り替えます' }).then(function () {
+    DWD.drone(0.06);
+    // すべて読んだあと、しばらく何もしなくても止まる
+    var chk = setInterval(function () {
+      if (crashed) return clearInterval(chk);
+      if (Date.now() - startedAt > 30000 * DWD.speed() && !DWD.isScaring() && !document.querySelector('.viewer') && maybeCrash()) clearInterval(chk);
+    }, 3000);
+    DWD.haunt({ min: 18000, max: 32000, big: false, textSel: 'dd, .news p, .old p', paused: function () { return !!document.querySelector('.viewer,.crash'); } });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark 2</title>
+<link rel="stylesheet" href="assets/dark.css">
+<style>
+  .end { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 40px 16px 30px; position: relative; z-index: 2; text-align: center; }
+  .end .etitle { font-family: "Courier New", monospace; letter-spacing: .3em; color: #6b5d55; font-size: 13px; }
+  .end .msg { opacity: 0; transition: opacity 1.4s; }
+  .end .msg.on { opacity: 1; }
+  .fade2 { opacity: 0; transition: opacity 2s; }
+  .fade2.on { opacity: 1; }
+  .stats { font-family: "Courier New", monospace; font-size: 13px; color: #6b5f58; line-height: 2; margin-top: 18px; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
+  .elist { font-size: 13px; color: #8a7e74; line-height: 2; margin-top: 10px; }
+  .hint { font-size: 13px; color: #a05050; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="end">
+  <h1 class="logo">DarkWebDark 2</h1>
+  <div class="etitle" id="etitle"></div>
+  <div id="lines"></div>
+  <p class="msg dim" id="endmark" style="margin-top:20px">— END —</p>
+  <div class="fade2" id="after">
+    <div class="stats" id="stats"></div>
+    <div class="stats" id="rtaBox"></div>
+    <div class="elist" id="elist"></div>
+    <div class="btns">
+      <a class="btn" href="index.html#rank" id="rankBtn" style="border-color:#7a5a10;color:#ffd36a">RTAモード・ランキング</a>
+      <button class="btn" id="again" type="button">さいしょから</button>
+      <a class="btn" href="index.html">ひびログへ</a>
+    </div>
+  </div>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+<script src="assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.04);
+  var m = /[?&]e=(\d)/.exec(location.search);
+  var e = m ? +m[1] : (DWD.get('lastEnd') || 1);
+  if ([1, 2, 3].indexOf(e) < 0) e = 1;
+  var prevName = DWD.prevName();
+  var name = DWD.who();
+  var ends = DWD.get('endings') || [];
+  // 直接開かれたときも、見たことにはしない（L14 で記録済みのものだけ）
+  var TITLES = { 1: 'END 1　ただいま', 2: 'END 2　こたえない', 3: 'END 3　おかえり、はるか' };
+  var LINES = {
+    1: [
+      ['ゆきは　そとに　でた。'],
+      ['でも　そとに　でたのは　かえってきたもの。'],
+      ['ほんとうの　ゆきも　まいも　まだ　かべの　なか。'],
+      ['そして　' + name + '　も。', 'red'],
+      [prevName ? '203号室には　いまも　' + prevName + '　が　すんでいる。' : '203号室には　もうすぐ　つぎの　ひとが　すむ。'],
+      ['あなたは　これから　まいばん　2じ13ふんに　かべを　たたく。'],
+      ['こたえて　もらえるまで。'],
+      ['ノックが　きこえても　こたえないで', 'red']
+    ],
+    2: [
+      ['だれも　はいらなかった。'],
+      ['だれも　でなかった。'],
+      ['まいも　ゆきも　まだ　かべの　なかで　ノックを　つづけている。'],
+      ['こんどは　あなたの　へやの　かべを。'],
+      ['こんや　2じ13ふん。'],
+      ['コン　コン　コン'],
+      ['こたえないで', 'red']
+    ],
+    3: [
+      ['はるかは　28ねんぶりに　かえってきた。'],
+      ['19さいの　まま。　コーヒーは　のまない。'],
+      ['喫茶こもれびは　きょうも　しまっている。'],
+      ['マスターは　まいばん　かべの　まえに　すわっている。'],
+      ['はるかが　ずっと　かべを　みつめているから。'],
+      ['かべの　なかには　まいと　ゆきと　' + name + '。'],
+      ['ノックが　きこえても　こたえないで', 'red']
+    ]
+  };
+  document.getElementById('etitle').textContent = TITLES[e];
+  var box = document.getElementById('lines');
+  LINES[e].forEach(function (l) {
+    var p = document.createElement('p');
+    p.className = 'msg' + (l[1] ? ' ' + l[1] : '');
+    p.textContent = l[0];
+    box.appendChild(p);
+  });
+
+  // クリアの記録（1周につき1回だけ数える）
+  if (!DWD.get('cleared')) {
+    DWD.set('cleared', true);
+    DWD.inc('clears');
+  }
+  var firstUnlock = !DWD.get('rtaUnlocked');
+  DWD.set('rtaUnlocked', true);
+  DWD.set('stage', null);
+
+  var rta = DWD.get('rta');
+  var rtaBox = document.getElementById('rtaBox');
+  if (rta && rta.start && rta.end) {
+    var ms = rta.end - rta.start;
+    rtaBox.innerHTML = '<span style="color:#ffd36a;font-size:15px">RTA タイム　<b style="font-size:24px">' + DWD.fmt(ms) + '</b></span><br>' +
+      (DWD.get('rtaBest') === ms ? '<span style="color:#7dff9a">自己ベスト更新！</span>' : '自己ベスト：' + DWD.fmt(DWD.get('rtaBest')));
+    document.getElementById('rankBtn').textContent = 'ランキングに登録する';
+    DWD.set('rta', null); // 計測完了。表示用のタイムは rtaPending に残る
+  } else if (firstUnlock) {
+    rtaBox.innerHTML = '<span style="color:#ffd36a">— RTAモード が 解放されました（ひびログに表示） —</span>';
+  }
+
+  document.getElementById('stats').innerHTML =
+    'おどろかされた回数：' + (DWD.get('scares') || 0) + '<br>' +
+    'まちがえた回数：' + (DWD.get('miss') || 0) + '<br>' +
+    'プレイヤー名：' + DWD.esc(name) +
+    (prevName ? '<br>前作の記録：' + DWD.esc(prevName) + '（203号室）' : '');
+
+  var el = document.getElementById('elist');
+  var html = '見たおわり　' + ends.length + ' / 3';
+  if (ends.length < 3) {
+    html += '<div class="hint">まだ　みていない　おわりが　あります。';
+    if (ends.indexOf(2) < 0 && ends.length >= 1) html += '<br>（ヒント：さいごの　へやで、なにも　しない）';
+    else if (ends.indexOf(3) < 0) html += '<br>（ヒント：28ねん　まっている　ひとが　いる）';
+    else if (ends.indexOf(1) < 0) html += '<br>（ヒント：まいが　たのんだ　なまえ）';
+    html += '</div>';
+  }
+  el.innerHTML = html;
+
+  var ps = DWD.$$('#lines .msg').concat([document.getElementById('endmark')]);
+  var i = 0;
+  (function next() {
+    if (i >= ps.length) {
+      document.getElementById('after').classList.add('on');
+      return;
+    }
+    ps[i++].classList.add('on');
+    setTimeout(next, 1700);
+  })();
+
+  document.getElementById('again').addEventListener('click', function () {
+    DWD.flash(140);
+    DWD.sfx.knock(3);
+    DWD.reset();
+    setTimeout(function () { location.href = 'index.html'; }, 1300);
+  });
+  // 最初のタップで、遠くからノック
+  document.addEventListener('pointerdown', function once() {
+    document.removeEventListener('pointerdown', once);
+    DWD.sfx.knock(3, 0.5, 0.4);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/07</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  .book { max-width: 520px; margin: 16px auto 0; background: #16110d; border: 1px solid #2d221b; padding: 14px; box-shadow: inset 0 0 40px #000; }
+  .book h2 { margin: 0 0 6px; font-size: 16px; letter-spacing: .3em; text-align: center; color: #a8998a; }
+  .pages { list-style: none; margin: 0; padding: 0; }
+  .pages li { border-bottom: 1px dashed #2d221b; }
+  .pages button { width: 100%; text-align: left; background: none; border: 0; color: #c8b9a6; font: inherit; font-size: 15px; padding: 10px 6px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; min-height: 44px; }
+  .pages button .rd { font-size: 11px; color: #6b5040; font-family: "Courier New", monospace; }
+  .pages button.changed { color: #d06060; }
+  .sheet { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .9); display: flex; align-items: center; justify-content: center; padding: 14px; }
+  .paper { width: min(520px, 100%); max-height: 86vh; overflow-y: auto; background: #e9dfc8; color: #2a1f14; padding: 22px 20px 18px; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; line-height: 2.1; position: relative; background-image: repeating-linear-gradient(transparent 0 33px, rgba(80, 60, 30, .18) 33px 34px); box-shadow: 0 0 60px #000; }
+  .paper .dt { font-size: 13px; color: #6b5a40; letter-spacing: .1em; }
+  .paper .tx { font-size: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .paper .tx .ch { color: #9a1010; }
+  .paper .sign { text-align: right; font-size: 13px; color: #6b5a40; }
+  .paper .cls { position: absolute; top: 4px; right: 6px; background: none; border: 0; font-size: 26px; color: #6b5a40; cursor: pointer; padding: 4px 10px; }
+  .paper.v3 { background: #1a0606; color: #e8c8c8; background-image: none; }
+  .paper.v3 .dt, .paper.v3 .sign { color: #8a3030; }
+  .ask { max-width: 520px; margin: 20px auto 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 07 / にっき<span class="sub">1998</span></div>
+  <h1 class="logo">DarkWebDark/07</h1>
+  <div class="draft"><span class="dh">まい の 下書き ／ 11/04 02:13</span>203の　おしいれに　にっきが　あった。<br>よむたびに　ちがう　ことが　かいてある。　なんども　よんで。</div>
+  <div class="book">
+    <h2>にっき</h2>
+    <ul class="pages" id="pages"></ul>
+  </div>
+  <div class="ask">
+    <p class="msg red" id="q">この　にっきを　さいしょに　かいたのは　だれ？</p>
+    <form class="row" id="form"><input class="input" id="ans" maxlength="12" placeholder="なまえ" autocomplete="off"><button class="btn">こたえる</button></form>
+    <p class="err" id="err"></p>
+  </div>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.05);
+  DWD.reach(7);
+
+  // 各ページ：v1 = 最初の持ち主の文 / v2 = まいの文に書き換わる / v3 = 壁の中から
+  // {{ }} で囲んだところが書き換わった部分（赤く表示）
+  var PAGES = [
+    { d: ['1998/10/01', '2026/10/01', '28ねんまえ'],
+      v1: '大学の近くに部屋を借りた。みどり荘の203号室。\nお父さんは反対したけど、お店から歩いて10分だし、毎朝コーヒーを飲みに行くからって説得した。\n日当たりがよくて、いい部屋。',
+      v2: '大学の近くに部屋を借りた。みどり荘の{{202}}号室。\n{{ゆき}}は反対したけど、{{こもれび}}から歩いて10分だし、毎朝コーヒーを飲みに行くからって説得した。\n日当たりがよくて、いい部屋。',
+      v3: 'ここに　きて　28ねん。\nここは　くらくて　せまくて　あたたかい。\nみんな　たったまま　ならんで　ねむってる。' },
+    { d: ['1998/10/09', '2026/10/09', 'きのう'],
+      v1: '夜中に、壁がコンコン鳴る。\nとなりの202の人かな。2時すぎ。\nあしたあいさつに行こう。',
+      v2: '夜中に、壁がコンコン鳴る。\nとなりの{{203}}の人かな。{{2時13分}}。\nあしたあいさつに行こう。',
+      v3: 'コン　コン　コン\nコン　コン　コン\nコン　コン　コン\nだれも　こたえない。　さむい。' },
+    { d: ['1998/10/17', '2026/10/17', 'きょう'],
+      v1: '202は空き部屋だった。表札もない。\nじゃあ、あの音はなに？\n数えたら3回。毎晩、ぜったい3回。',
+      v2: '{{203}}は空き部屋だった。表札もない。\nじゃあ、あの音はなに？\n数えたら3回。毎晩、ぜったい3回。\n{{クロが　かべを　みてる。}}',
+      v3: 'クロが　きた。\nクロは　ないた。\nだから　クロは　ここに　いる。\nかえっていった　ほうの　クロは　クロじゃない。' },
+    { d: ['1998/10/25', '2026/10/25', 'あした'],
+      v1: 'お父さんに話したら、笑ってた。\n「古い建物は鳴るもんだよ」って。\nでもお父さん、コーヒーをこぼした。',
+      v2: '{{まい}}に話したら、{{しんぱいしてくれた}}。\n「{{うちに　泊まりにおいで}}」って。\nでも{{わたし、いかなかった}}。',
+      v3: 'おとうさんは　まいばん　だれかを　202に　いれる。\nわたしを　だすために。\nでも　でていくのは　いつも　わたしじゃない。' },
+    { d: ['1998/11/01', '2026/11/01', '…'],
+      v1: 'ノックのあと、声がするようになった。\nわたしの名前を呼ぶ。\nはるか、はるか、って。',
+      v2: 'ノックのあと、声がするようになった。\nわたしの名前を呼ぶ。\n{{まい、まい}}、って。',
+      v3: 'なまえを　よばれたら　そとに　でられる。\nよんだ　ひとが　かわりに　はいる。\nそれだけは　ほんとう。\n……たぶん。' },
+    { d: ['1998/11/03', '2026/11/03', '……'],
+      v1: '明日は、お父さんのお店に泊まりにいく。\n今夜だけ、がまんする。\n耳せんをして寝る。',
+      v2: '{{ろくおんを　のこした。}}\n{{うしろから　ゆっくり　きいて。}}\n{{わたしの　こえが　きこえるはず。}}',
+      v3: 'つぎの　へやの　ばんごうは　ない。\nへやと　へやの　あいだ。' },
+    { d: ['1998/11/04', '2026/11/04', 'いま'],
+      v1: '2:13\nコン　コン　コン\n\n…………はい',
+      v2: '{{2:13}}\nコン　コン　コン\n\n…………はい\n{{（まい）}}',
+      v3: 'つぎは　だれ？', scare: true }
+  ];
+  var SIGN = ['H.', 'M.', ''];
+
+  var reads = DWD.get('diaryReads') || {};
+  var list = document.getElementById('pages');
+  function ver(i) {
+    return Math.min(2, reads[i] || 0); // 読んだ回数 0→v1, 1→v2, 2+→v3
+  }
+  function renderList() {
+    list.innerHTML = '';
+    PAGES.forEach(function (p, i) {
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button';
+      var v = ver(i);
+      var dt = document.createElement('span');
+      dt.textContent = p.d[Math.max(0, v - 0)] || p.d[0];
+      if (!reads[i]) dt.textContent = p.d[0];
+      var rd = document.createElement('span');
+      rd.className = 'rd';
+      rd.textContent = reads[i] ? 'よんだ ×' + reads[i] : 'みどく';
+      b.appendChild(dt);
+      b.appendChild(rd);
+      if (reads[i]) b.classList.add('changed');
+      b.addEventListener('click', function () { openPage(i); });
+      li.appendChild(b);
+      list.appendChild(li);
+    });
+  }
+
+  var opening = false;
+  var scared = !!DWD.get('diaryScare');
+  function openPage(i) {
+    if (opening || DWD.isScaring()) return;
+    opening = true;
+    var p = PAGES[i];
+    var v = ver(i);
+    var text = [p.v1, p.v2, p.v3][v];
+    var sh = document.createElement('div');
+    sh.className = 'sheet';
+    var pa = document.createElement('div');
+    pa.className = 'paper' + (v === 2 ? ' v3' : '');
+    pa.innerHTML = '<button type="button" class="cls" aria-label="とじる">×</button><div class="dt"></div><div class="tx"></div><div class="sign"></div>';
+    pa.querySelector('.dt').textContent = p.d[v];
+    var tx = pa.querySelector('.tx');
+    // {{ }} を赤い字に
+    text.split(/(\{\{.*?\}\})/).forEach(function (part) {
+      if (!part) return;
+      var m = part.match(/^\{\{(.*)\}\}$/);
+      if (m) {
+        var s = document.createElement('span');
+        s.className = 'ch';
+        s.textContent = m[1];
+        tx.appendChild(s);
+      } else tx.appendChild(document.createTextNode(part));
+    });
+    pa.querySelector('.sign').textContent = SIGN[v];
+    sh.appendChild(pa);
+    document.body.appendChild(sh);
+    DWD.sfx.static(0.15, 0.15);
+    if (v === 1) setTimeout(function () { DWD.sfx.whisper(1.2); }, 500);
+    if (v === 2) DWD.sfx.heartbeat(2, 0.7);
+    // 最後のページを3回目に読むと
+    if (p.scare && v === 2 && !scared) {
+      scared = true;
+      DWD.set('diaryScare', true);
+      setTimeout(function () { DWD.scare({ type: 'girl', dur: 1300 }); }, 1500);
+    } else if (Math.random() < 0.12) {
+      setTimeout(function () { DWD.flash(90, 'girl'); }, 1200);
+    }
+    function close() {
+      sh.remove();
+      reads[i] = (reads[i] || 0) + 1;
+      DWD.set('diaryReads', reads);
+      renderList();
+      // 閉じた瞬間、ページの日付が書き換わる
+      var btn = list.querySelectorAll('button')[i];
+      if (btn) DWD.glitchText(btn.querySelector('span'), 400, 0.5);
+      DWD.sfx.blip();
+      opening = false;
+    }
+    pa.querySelector('.cls').addEventListener('click', close);
+    sh.addEventListener('click', function (e) { if (e.target === sh) close(); });
+  }
+  renderList();
+
+  var tries = 0;
+  document.getElementById('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = DWD.norm(document.getElementById('ans').value);
+    if (!v) return;
+    var err = document.getElementById('err');
+    if (['はるか', 'まみやはるか', '間宮はるか', 'haruka', 'h', '春香', 'はるかさん'].indexOf(v) >= 0) {
+      err.textContent = 'そう。　わたし';
+      DWD.sfx.whisper(2);
+      DWD.reach(8);
+      setTimeout(function () { DWD.go('../8/index.html', 1200); }, 1600);
+      return;
+    }
+    tries++;
+    DWD.inc('miss');
+    if (['まい', 'まいまい', 'mai'].indexOf(v) >= 0) err.textContent = 'それは　いま　かいている　ひと';
+    else if (['ゆき', 'yuki', 'しらいしゆき'].indexOf(v) >= 0) err.textContent = 'ゆきは　にっきを　かかない。　ブログを　かく';
+    else if (tries % 3 === 0) { DWD.scare({ type: 'text', text: 'ちがう' }); err.textContent = 'さいしょの　ページの　さいしょの　ばん。　1998ねん。　しんぶん'; }
+    else err.textContent = DWD.pick(['ちがう', 'さいしょに　よんだ　とき、　なにが　かいてあった？', 'サインは　H.']);
+  });
+
+  DWD.gate({ title: 'LAYER 07 に　おりますか', button: 'おりる' }).then(function () {
+    DWD.drone(0.14);
+    DWD.haunt({ min: 18000, max: 32000, big: false, paused: function () { return opening; } });
+  });
+})();
+</script>
+</body>
+</html>

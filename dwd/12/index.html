@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/12</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  /* スマホでもタブの名前が見えるよう、ページの上にタブを再現する */
+  .ftab { position: sticky; top: 0; z-index: 20; display: flex; align-items: flex-end; gap: 6px; padding: 6px 8px 0; padding-top: calc(6px + env(safe-area-inset-top, 0px)); background: #111; border-bottom: 1px solid #222; }
+  .ftab .t { display: flex; align-items: center; gap: 8px; background: #1e1e1e; color: #ccc; border-radius: 8px 8px 0 0; padding: 7px 12px; font: 13px system-ui, sans-serif; max-width: min(320px, 78vw); min-width: 0; }
+  .ftab .t .ico { width: 14px; height: 14px; border-radius: 3px; background: #a01010; flex: none; }
+  .ftab .t .tt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ftab .t2 { color: #555; font: 13px system-ui, sans-serif; padding: 7px 4px; }
+  .big { text-align: center; font: 900 clamp(56px, 18vw, 120px)/1.1 "Hiragino Mincho ProN", "Yu Mincho", serif; color: #a01010; min-height: 1.2em; margin: 10px 0; }
+  .cnt { text-align: center; font: 14px "Courier New", monospace; color: #6b5d55; letter-spacing: .3em; }
+  .fb { text-align: center; margin-top: 30px; font-size: 12px; color: #4a4440; }
+  .fb button { background: none; border: 0; color: #6b5d55; text-decoration: underline; font: inherit; cursor: pointer; padding: 8px; }
+</style>
+</head>
+<body>
+<div class="ftab" aria-hidden="true"><div class="t"><span class="ico"></span><span class="tt" id="tt">DarkWebDark/12</span></div><div class="t2">＋</div></div>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 12 / もどれない<span class="sub">うえ</span></div>
+  <h1 class="logo">DarkWebDark/12</h1>
+  <div class="draft"><span class="dh">まい の 下書き ／ 11/04 02:13</span>ここには　とびらが　ない。<br>すすみかたは　この　ページの　なかには　かいてない。</div>
+  <p class="msg" id="m1">うえを　みて</p>
+  <p class="msg dim" id="m2">ページの　なまえ</p>
+  <div class="big" id="big"></div>
+  <p class="cnt" id="cnt"></p>
+  <p class="err" id="err"></p>
+  <div class="fb">もどるボタン・スワイプが使えない環境の方は <button type="button" id="fb">こちら（もどる）</button></div>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.05);
+  DWD.reach(12);
+  var tt = document.getElementById('tt');
+  var big = document.getElementById('big');
+  var cnt = document.getElementById('cnt');
+  var err = document.getElementById('err');
+  var backs = 0, done = false, armed = false, cur = 0;
+
+  // ハッシュつきで開かれたら、きれいにしておく
+  if (/^#k\d/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search);
+
+  // タブの名前が流れる
+  var FRAMES = ['DarkWebDark/12', '……', 'もどって', 'もどって　もどって', 'もどって　3かい', 'それが　ノック', 'DarkWebDark/12', 'うしろに　いるよ'];
+  var fi = 0;
+  function setTitle(s) { document.title = s; tt.textContent = s; }
+  var titleTimer = null;
+  function startTitles() {
+    titleTimer = setInterval(function () {
+      if (done) return;
+      fi = (fi + 1) % FRAMES.length;
+      setTitle(FRAMES[fi]);
+      if (FRAMES[fi] !== 'DarkWebDark/12' && Math.random() < 0.4) DWD.sfx.blip();
+    }, 1700);
+  }
+
+  function knock() {
+    if (done) return;
+    backs++;
+    DWD.sfx.knock(1, 0.3, 0.9);
+    big.textContent = 'コン';
+    big.style.opacity = 1;
+    setTimeout(function () { big.style.opacity = 0.25; }, 500);
+    cnt.textContent = new Array(backs + 1).join('●') + new Array(4 - backs).join('○');
+    setTitle(new Array(backs + 1).join('コン　').trim());
+    if (backs === 1) document.getElementById('m1').textContent = 'そう';
+    if (backs === 2) document.getElementById('m1').textContent = 'もう　いっかい';
+    if (backs >= 3) success();
+  }
+
+  window.addEventListener('popstate', function (e) {
+    if (!armed || done) return;
+    var k = e.state && e.state.k ? e.state.k : 0;
+    if (k < cur) knock(); // もどった
+    cur = k;
+  });
+  document.getElementById('fb').addEventListener('click', function () {
+    if (!armed) return;
+    if (cur > 0) history.back();
+    else knock();
+  });
+
+  function success() {
+    done = true;
+    clearInterval(titleTimer);
+    setTitle('はいれる');
+    document.getElementById('m1').textContent = 'こたえた';
+    document.getElementById('m2').textContent = 'もどった　ぶんだけ　したへ';
+    big.textContent = 'コン　コン　コン';
+    big.style.fontSize = 'clamp(32px, 10vw, 64px)';
+    DWD.sfx.knock(3, 0.25);
+    setTimeout(function () {
+      DWD.scare({ type: 'eye', dur: 1100 }).then(function () {
+        DWD.reach(13);
+        DWD.go('../13/index.html', 1000);
+      });
+    }, 1300);
+  }
+
+  // タブを離れて戻ると
+  var hiddenAt = 0;
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { hiddenAt = Date.now(); setTitle('どこ　いくの'); return; }
+    if (hiddenAt && Date.now() - hiddenAt > 1500 && !done) {
+      err.textContent = 'おかえり。　' + Math.round((Date.now() - hiddenAt) / 1000) + 'びょう　まってた';
+      DWD.sfx.whisper(1.2);
+    }
+  });
+
+  var wrongTaps = 0;
+  document.addEventListener('click', function (e) {
+    if (!armed || done || e.target.closest('#fb, .dwd-cfg, .dwd-cfgp')) return;
+    wrongTaps++;
+    if (wrongTaps === 6) err.textContent = 'ページの　なかを　さわっても　すすまない';
+    if (wrongTaps === 12) { DWD.inc('miss'); DWD.scare({ type: 'text', text: 'うえ' }); }
+  });
+
+  DWD.gate({ title: 'LAYER 12 に　おりますか', button: 'おりる', warn: 'ブラウザのタブの名前を見てください<br>（スマホでは、ページの上に表示しています）' }).then(function () {
+    // ユーザー操作の中で履歴を積む（もどるボタン＝ノック）
+    for (var i = 1; i <= 3; i++) history.pushState({ k: i }, '', '#k' + i);
+    cur = 3;
+    armed = true;
+    startTitles();
+    DWD.drone(0.1);
+    DWD.haunt({ min: 22000, max: 36000, big: false });
+  });
+})();
+</script>
+</body>
+</html>

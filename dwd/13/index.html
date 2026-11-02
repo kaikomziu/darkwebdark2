@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/13</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  .view { max-width: 640px; margin: 14px auto 0; position: relative; }
+  .view canvas { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; background: #000; }
+  .ways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 640px; margin: 10px auto 0; }
+  .ways button { min-height: 52px; }
+  .step { text-align: center; font: 13px "Courier New", monospace; color: #6b5d55; letter-spacing: .3em; margin-top: 10px; }
+  .sub2 { text-align: center; font-size: 13px; color: #6e655e; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 13 / クロのあと<span class="sub">LAYER 04 ろうか の　べつの　かお</span></div>
+  <h1 class="logo">DarkWebDark/13</h1>
+  <div class="draft"><span class="dh">まい の 下書き ／ 11/04 02:13</span>くらやみに　ねこが　2ひき　いる。<br>ほんものの　クロに　ついていって。　にせものは　くびわを　していない。</div>
+  <div class="view"><canvas id="cv" width="600" height="400"></canvas></div>
+  <div class="ways" id="ways">
+    <button type="button" class="btn" data-w="0">ひだり</button>
+    <button type="button" class="btn" data-w="1">まっすぐ</button>
+    <button type="button" class="btn" data-w="2">みぎ</button>
+  </div>
+  <p class="step" id="step"></p>
+  <p class="sub2">ときどき　あかりが　つく。　なきごえも　ききわけて</p>
+  <p class="err" id="err"></p>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.05);
+  DWD.reach(13);
+  var cv = document.getElementById('cv');
+  var c = cv.getContext('2d');
+  var W = 600, H = 400;
+  var GOAL = 6;
+  var step = 0, real = 0, fake = 1, lit = 0, busy = false, started = false, finished = false;
+  var eyeY = [0, 0, 0];
+  var PAN = [-0.8, 0, 0.8];
+
+  function shuffle() {
+    var a = [0, 1, 2].sort(function () { return Math.random() - 0.5; });
+    real = a[0]; fake = a[1];
+    eyeY = [DWD.rand(0.42, 0.62), DWD.rand(0.42, 0.62), DWD.rand(0.42, 0.62)];
+    document.getElementById('step').textContent = 'B13 - ' + (step + 1) + ' / ' + GOAL;
+  }
+
+  function cat(x, y, s, collar, eyes) {
+    c.fillStyle = '#16120f';
+    c.beginPath(); c.ellipse(x, y + s * 0.6, s * 0.75, s * 0.5, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x, y, s * 0.42, 0, Math.PI * 2); c.fill();
+    [-1, 1].forEach(function (d) {
+      c.beginPath(); c.moveTo(x + d * s * 0.38, y - s * 0.08); c.lineTo(x + d * s * 0.32, y - s * 0.58); c.lineTo(x + d * s * 0.06, y - s * 0.36); c.fill();
+    });
+    if (collar) { c.fillStyle = '#c01010'; c.fillRect(x - s * 0.32, y + s * 0.32, s * 0.64, s * 0.09); c.fillStyle = '#e8c040'; c.beginPath(); c.arc(x, y + s * 0.45, s * 0.05, 0, Math.PI * 2); c.fill(); }
+    if (eyes) eyePair(x, y, s);
+  }
+  function eyePair(x, y, s) {
+    c.fillStyle = '#e8d84a';
+    c.shadowColor = '#e8d84a'; c.shadowBlur = 10;
+    [-1, 1].forEach(function (d) { c.beginPath(); c.ellipse(x + d * s * 0.17, y, s * 0.07, s * 0.09, 0, 0, Math.PI * 2); c.fill(); });
+    c.shadowBlur = 0;
+    c.fillStyle = '#000';
+    [-1, 1].forEach(function (d) { c.fillRect(x + d * s * 0.17 - 1.5, y - s * 0.07, 3, s * 0.14); });
+  }
+
+  function draw(now) {
+    c.fillStyle = '#000';
+    c.fillRect(0, 0, W, H);
+    var L = lit > 0 ? 1 : 0;
+    // 3つの通路
+    for (var i = 0; i < 3; i++) {
+      var x = 100 + i * 200;
+      c.fillStyle = L ? '#2a221d' : '#0a0807';
+      c.fillRect(x - 85, 60, 170, 320);
+      c.fillStyle = L ? '#0e0b09' : '#020202';
+      c.beginPath(); c.moveTo(x - 60, 380); c.lineTo(x - 22, 140); c.lineTo(x + 22, 140); c.lineTo(x + 60, 380); c.fill();
+      c.fillStyle = '#000';
+      c.beginPath(); c.ellipse(x, 140, 22, 30, 0, Math.PI, 0); c.fill();
+      var s = 46;
+      var y = H * eyeY[i];
+      if (i === real || i === fake) {
+        // まばたき
+        var blink = Math.sin(now / 700 + i * 2.1) > 0.96;
+        if (L) cat(x, y, s, i === real, !blink);
+        else if (!blink) eyePair(x, y, s);
+      }
+    }
+    // 壁の文字
+    if (L) {
+      c.fillStyle = 'rgba(140,20,20,.6)';
+      c.font = '16px serif';
+      c.fillText('クロ', 30, 50); c.fillText('くびわ', 480, 40); c.fillText('あか', 300, 30);
+    }
+    c.fillStyle = 'rgba(0,0,0,.22)';
+    for (var yy = 0; yy < H; yy += 3) c.fillRect(0, yy, W, 1);
+  }
+
+  var last = performance.now();
+  (function loop(now) {
+    var dt = now - last; last = now;
+    if (lit > 0) lit -= dt;
+    draw(now);
+    requestAnimationFrame(loop);
+  })(performance.now());
+
+  // あかりが一瞬つく（4〜7秒ごと）
+  function flick() {
+    if (finished) return;
+    setTimeout(function () {
+      if (!busy && started) { lit = 650; DWD.sfx.static(0.05, 0.1); }
+      flick();
+    }, DWD.rand(4000, 7000) * (DWD.rtaRunning() ? 0.6 : 1));
+  }
+  // なきごえ（本物はふつう、にせものは低くゆがむ）
+  function cries() {
+    if (finished) return;
+    setTimeout(function () {
+      if (!busy && started) {
+        if (Math.random() < 0.6) DWD.sfx.meow(false, PAN[real]);
+        else DWD.sfx.meow(true, PAN[fake]);
+      }
+      cries();
+    }, DWD.rand(2600, 4600));
+  }
+
+  var err = document.getElementById('err');
+  DWD.$$('#ways button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!started || busy || finished || DWD.isScaring()) return;
+      var w = +b.dataset.w;
+      busy = true;
+      DWD.sfx.knock(2, 0.4, 0.3);
+      if (w === real) {
+        step++;
+        err.textContent = DWD.pick(['クロは　さきへ　すすんだ', 'ニャア', 'ついてきて', 'もうすこし']);
+        DWD.sfx.meow(false, PAN[w]);
+        setTimeout(function () {
+          if (step >= GOAL) return end();
+          shuffle();
+          busy = false;
+          lit = 500;
+        }, 900);
+      } else if (w === fake) {
+        DWD.inc('miss');
+        step = Math.max(0, step - 2);
+        setTimeout(function () {
+          DWD.scare({ type: 'cat', dur: 1200 }).then(function () {
+            err.textContent = 'くびわの　ない　ほう。　すこし　もどされた';
+            shuffle();
+            busy = false;
+          });
+        }, 350);
+      } else {
+        err.textContent = 'いきどまり。　なにも　いない';
+        setTimeout(function () { shuffle(); busy = false; }, 900);
+      }
+    });
+  });
+
+  function end() {
+    finished = true;
+    lit = 99999;
+    eyeY = [0.5, 0.5, 0.5];
+    real = 1; fake = -1;
+    err.textContent = 'クロは　ここで　まってた';
+    DWD.sfx.meow(false, 0);
+    setTimeout(function () {
+      document.getElementById('step').textContent = 'クロ';
+      err.textContent = 'この　さきが　202と203の　あいだ';
+      DWD.sfx.knock(3);
+    }, 1600);
+    setTimeout(function () {
+      DWD.reach(14);
+      DWD.go('../14/index.html', 1200);
+    }, 3800);
+  }
+
+  shuffle();
+  DWD.gate({ title: 'LAYER 13 に　おりますか', button: 'おりる', warn: '※ 音が手がかりになります（左右から聞こえます）' }).then(function () {
+    started = true;
+    lit = 1200;
+    DWD.drone(0.1);
+    flick();
+    cries();
+  });
+})();
+</script>
+</body>
+</html>

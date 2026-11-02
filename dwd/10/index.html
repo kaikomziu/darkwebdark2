@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/10</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  .mon { max-width: 640px; margin: 14px auto 0; background: #050605; border: 1px solid #1f2a20; padding: 8px; border-radius: 6px; }
+  .mon canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; image-rendering: pixelated; background: #000; }
+  .cams { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+  .cams button { font: 13px "Courier New", monospace; min-height: 44px; background: #0d120e; border: 1px solid #263428; color: #8fb09a; border-radius: 4px; cursor: pointer; line-height: 1.2; padding: 4px 2px; }
+  .cams button.on { border-color: #e33; color: #f88; }
+  .cams button[disabled] { opacity: .25; cursor: default; }
+  .cams small { display: block; font-size: 10px; color: #5a6e5e; }
+  .bar2 { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .bar2 button { font: 15px "Courier New", monospace; min-width: 52px; min-height: 44px; background: #0d120e; border: 1px solid #263428; color: #cfe0d2; border-radius: 4px; cursor: pointer; }
+  .bar2 input[type=range] { flex: 1; min-width: 0; accent-color: #c33; height: 32px; }
+  .tc { font: 13px "Courier New", monospace; color: #8fb09a; text-align: center; margin-top: 4px; letter-spacing: .1em; }
+  .log2 { max-width: 640px; margin: 10px auto 0; font: 12px/1.8 "Courier New", monospace; color: #6b7d6e; border: 1px solid #1a221b; padding: 8px 10px; background: #040504; }
+  .q { text-align: center; margin-top: 20px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 10 / かんし<span class="sub">2026-11-04 01:30 ― 02:20</span></div>
+  <h1 class="logo">DarkWebDark/10</h1>
+  <div class="draft"><span class="dh">まい の 下書き ／ 11/04 02:13</span>マスターは　カメラで　みてた。<br>ろうかも。　ゆきの　へやの　なかも。</div>
+  <div class="mon">
+    <canvas id="cv" width="320" height="180"></canvas>
+    <div class="bar2">
+      <button type="button" id="pp" aria-label="再生／一時停止">▶</button>
+      <input type="range" id="seek" min="0" max="3000" step="1" value="0" aria-label="シーク">
+      <button type="button" id="spd">×60</button>
+    </div>
+    <div class="tc" id="tc">01:30:00</div>
+    <div class="cams" id="cams">
+      <button type="button" data-c="1" class="on">CAM1<small>入口</small></button>
+      <button type="button" data-c="2">CAM2<small>2F西</small></button>
+      <button type="button" data-c="3">CAM3<small>2F東</small></button>
+      <button type="button" data-c="4" disabled>CAM4<small>？？？</small></button>
+    </div>
+  </div>
+  <div class="log2" id="log">録画を再生してください。<br>スライダーで好きな時刻へ移動、カメラはいつでも切り替えられます。</div>
+  <div class="q hidden" id="q">
+    <p class="msg red">まいは　どこへ　きえた？</p>
+    <div class="opts" id="opts"></div>
+    <p class="err" id="err"></p>
+  </div>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.03);
+  DWD.reach(10);
+  var cv = document.getElementById('cv');
+  var c = cv.getContext('2d');
+  var W = 320, H = 180;
+  var seek = document.getElementById('seek');
+  var tcEl = document.getElementById('tc');
+  var logEl = document.getElementById('log');
+  var cam = 1, t = 0, playing = false, rate = 60;
+  var T213 = 2580; // 02:13:00
+  var cam4 = !!DWD.get('cam4');
+  var seen213 = {};
+  var crawlDone = false;
+
+  function hms(s) {
+    var tot = 90 * 60 + Math.floor(s);
+    var h = Math.floor(tot / 3600), m = Math.floor((tot % 3600) / 60), x = tot % 60;
+    return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2) + ':' + ('0' + x).slice(-2);
+  }
+  function lerp(a, b, k) { return a + (b - a) * Math.max(0, Math.min(1, k)); }
+  function seg(t0, t1) { return (t - t0) / (t1 - t0); }
+
+  // 人（赤外線カメラ風に白っぽい）
+  function person(x, y, s, o) {
+    o = o || {};
+    c.globalAlpha = o.alpha === undefined ? 1 : o.alpha;
+    c.fillStyle = o.col || '#b8c8bc';
+    c.beginPath(); c.arc(x, y - s * 1.55, s * 0.2, 0, Math.PI * 2); c.fill();
+    c.fillRect(x - s * 0.22, y - s * 1.35, s * 0.44, s * 0.8);
+    c.fillRect(x - s * 0.18, y - s * 0.55, s * 0.14, s * 0.55);
+    c.fillRect(x + s * 0.04, y - s * 0.55, s * 0.14, s * 0.55);
+    if (o.hair) { c.fillStyle = '#1a201b'; c.fillRect(x - s * 0.2, y - s * 1.75, s * 0.4, s * (o.longHair ? 0.6 : 0.25)); }
+    if (o.bag) { c.fillStyle = '#7a8a7e'; c.fillRect(x + s * 0.2, y - s * 1.1, s * 0.15, s * 0.3); }
+    c.globalAlpha = 1;
+  }
+  function cat(x, y, s, look) {
+    c.fillStyle = '#0a0d0b';
+    c.beginPath(); c.ellipse(x, y, s * 0.5, s * 0.32, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.arc(x, y - s * 0.35, s * 0.26, 0, Math.PI * 2); c.fill();
+    if (look) {
+      c.fillStyle = '#f2f2c0';
+      c.fillRect(x - s * 0.13, y - s * 0.38, s * 0.07, s * 0.07);
+      c.fillRect(x + s * 0.06, y - s * 0.38, s * 0.07, s * 0.07);
+    }
+  }
+
+  // 2Fの廊下（mirror=true で東側から見る）
+  var VP = { x: 160, y: 62 };
+  function corridor(mirror) {
+    c.fillStyle = '#0c120e'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#16201a';
+    c.beginPath(); c.moveTo(20, H); c.lineTo(VP.x - 8, VP.y + 10); c.lineTo(VP.x + 8, VP.y + 10); c.lineTo(300, H); c.fill();
+    // 壁（ドアのある側）
+    c.fillStyle = '#1d2a22';
+    var wx = mirror ? 0 : W;
+    c.beginPath(); c.moveTo(mirror ? 20 : 300, H); c.lineTo(VP.x + (mirror ? -8 : 8), VP.y + 10); c.lineTo(VP.x + (mirror ? -8 : 8), VP.y - 30); c.lineTo(wx, -40); c.lineTo(wx, H); c.fill();
+    // 手すり側
+    c.strokeStyle = '#3a4a3e';
+    c.beginPath(); c.moveTo(mirror ? W : 0, 110); c.lineTo(VP.x + (mirror ? 8 : -8), VP.y + 2); c.stroke();
+  }
+  // 廊下の奥行き z(0〜1) を画面へ
+  function zp(z, mirror, side) {
+    var nearX = side === 'wall' ? (mirror ? 26 : 294) : 160;
+    var x = lerp(nearX, VP.x + (side === 'wall' ? (mirror ? -8 : 8) : 0), z);
+    var y = lerp(H - 6, VP.y + 10, z);
+    return { x: x, y: y, s: lerp(70, 8, z) };
+  }
+  var DOORZ = { 201: 0.2, 202: 0.45, 203: 0.62, 204: 0.76 };
+  function door(num, mirror, open) {
+    var z = mirror ? 1 - DOORZ[num] + 0.06 : DOORZ[num];
+    var p = zp(z, mirror, 'wall');
+    var w = p.s * 0.55, h = p.s * 1.5;
+    var x = mirror ? p.x : p.x - w;
+    c.fillStyle = open ? '#000' : '#2f3a32';
+    c.fillRect(x, p.y - h, w, h);
+    c.fillStyle = '#9fb0a2';
+    c.font = Math.max(5, p.s * 0.16) + 'px monospace';
+    c.textAlign = 'center';
+    c.fillText(num, x + w / 2, p.y - h * 0.82);
+    return { x: x, y: p.y, w: w, h: h, z: z };
+  }
+
+  function drawCam1() {
+    c.fillStyle = '#0c120e'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#18221c'; c.fillRect(0, 130, W, 50); // 地面
+    c.fillStyle = '#1f2b23'; c.fillRect(110, 20, 210, 110); // 建物の1階
+    for (var i = 0; i < 4; i++) { c.fillStyle = '#121a15'; c.fillRect(124 + i * 48, 70, 30, 46); }
+    // 階段
+    c.strokeStyle = '#4a5a4e';
+    c.lineWidth = 2;
+    c.beginPath(); c.moveTo(30, 132); c.lineTo(108, 40); c.stroke();
+    c.beginPath(); c.moveTo(48, 132); c.lineTo(122, 44); c.stroke();
+    c.lineWidth = 1;
+    for (i = 0; i < 13; i++) { var k = i / 13; c.beginPath(); c.moveTo(lerp(30, 108, k), lerp(132, 40, k)); c.lineTo(lerp(48, 122, k), lerp(132, 44, k)); c.stroke(); }
+    // まい
+    if (t >= 60 && t < 130) {
+      var x, y, s = 28;
+      if (t < 100) { x = lerp(300, 50, seg(60, 100)); y = 150; }
+      else { x = lerp(50, 112, seg(100, 130)); y = lerp(150, 46, seg(100, 130)); s = lerp(28, 20, seg(100, 130)); }
+      person(x, y, s, { hair: true, bag: true });
+    }
+    // 02:18 階段の下に男がいる（通りすがり）
+    if (t >= 2880 && t < 2960) {
+      var mx = t < 2940 ? 70 : lerp(70, 340, seg(2940, 2960));
+      person(mx, 152, 30, { col: '#8a988c' });
+      if (t < 2940) { c.fillStyle = '#e8f0e8'; c.font = '7px monospace'; c.textAlign = 'left'; c.fillText('こたえるな', mx - 18, 108); }
+    }
+  }
+  function drawCam2() {
+    corridor(false);
+    var open202 = t >= 1680 && t < 1700;
+    [201, 202, 203, 204].forEach(function (n) { door(n, false, n === 202 && open202); });
+    if (t >= 180 && t < 1700) {
+      var z;
+      if (t < 240) z = lerp(0.02, 0.4, seg(180, 240));
+      else if (t < 600) z = 0.4;
+      else if (t < 660) z = lerp(0.4, 0.57, seg(600, 660));
+      else if (t < 900) z = 0.57;
+      else if (t < 960) z = lerp(0.57, 0.4, seg(900, 960));
+      else z = 0.4;
+      var p = zp(z, false, 'mid');
+      var xo = (t >= 1680) ? lerp(0, 18, seg(1680, 1700)) : 0;
+      person(p.x + 30 * (1 - z) + xo, p.y, p.s, { hair: true, bag: true, alpha: t >= 1690 ? 0.4 : 1 });
+    }
+    // 02:13 で映像が乱れる
+    if (t >= T213 - 10 && t < T213 + 40) {
+      noise(0.9);
+      c.fillStyle = '#e33'; c.font = '12px monospace'; c.textAlign = 'center';
+      c.fillText('NO SIGNAL', W / 2, H / 2 - 6);
+      c.fillText('→ CAM4（202 室内）', W / 2, H / 2 + 12);
+      if (!cam4) {
+        cam4 = true;
+        DWD.set('cam4', true);
+        var b = document.querySelector('[data-c="4"]');
+        b.disabled = false;
+        b.querySelector('small').textContent = '202室内';
+        log('CAM4（202室内）の映像が　みつかりました');
+        DWD.sfx.static(0.6, 0.3);
+      }
+    }
+  }
+  function drawCam3() {
+    corridor(true);
+    var crack = t >= T213 && t < T213 + 30;
+    [204, 203, 202, 201].forEach(function (n) { var d = door(n, true, false); if (n === 203 && crack) { c.fillStyle = '#000'; c.fillRect(d.x + d.w - 3, d.y - d.h, 3, d.h); c.fillStyle = '#e8e4d8'; c.fillRect(d.x + d.w - 2, d.y - d.h * 0.7, 1, 1); } });
+    // 東から見たまい（奥のほう）
+    if (t >= 180 && t < 1700) {
+      var z;
+      if (t < 240) z = lerp(0.98, 0.6, seg(180, 240));
+      else if (t < 600) z = 0.6;
+      else if (t < 660) z = lerp(0.6, 0.43, seg(600, 660));
+      else if (t < 900) z = 0.43;
+      else if (t < 960) z = lerp(0.43, 0.6, seg(900, 960));
+      else z = 0.6;
+      var p = zp(z, true, 'mid');
+      person(p.x - 30 * (1 - z), p.y, p.s, { hair: true, bag: true, alpha: t >= 1690 ? 0.3 : 1 });
+    }
+  }
+  function drawCam4() {
+    // 天井の角から見下ろす 202 室内（魚眼ぎみ）
+    c.fillStyle = '#070a08'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#121a15';
+    c.beginPath(); c.moveTo(60, 20); c.lineTo(260, 20); c.lineTo(250, 120); c.lineTo(70, 120); c.fill(); // 203側の壁
+    c.fillStyle = '#0e140f';
+    c.beginPath(); c.moveTo(70, 120); c.lineTo(250, 120); c.lineTo(320, 180); c.lineTo(0, 180); c.fill(); // 床
+    // ひっかき傷
+    c.strokeStyle = '#2a362d';
+    for (var i = 0; i < 14; i++) { c.beginPath(); c.moveTo(110 + i * 7, 50 + (i % 3) * 6); c.lineTo(112 + i * 7, 90 + (i % 4) * 5); c.stroke(); }
+    var inRoom = t >= 1690;
+    if (inRoom) {
+      // 懐中電灯の光
+      var g = c.createRadialGradient(160, 80, 4, 160, 80, 90);
+      g.addColorStop(0, 'rgba(200,220,200,.25)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = g; c.fillRect(0, 0, W, H);
+    }
+    // クロ（壁を向いて座っている）
+    var catLook = t >= T213 + 45;
+    cat(178, 132, 22, catLook);
+    if (inRoom && t < T213 + 10) {
+      // まい：入ってきて、クロの横に座る
+      var x = t < 1720 ? lerp(300, 140, seg(1690, 1720)) : 140;
+      var y = t < 1720 ? lerp(175, 140, seg(1690, 1720)) : 140;
+      person(x, y, t < 1730 ? 34 : 26, { hair: true, bag: true });
+    } else if (t >= T213 + 10 && t < T213 + 40) {
+      // 立ちあがって、壁の中へ
+      var k = seg(T213 + 10, T213 + 40);
+      var py = lerp(140, 118, k);
+      c.save();
+      c.beginPath(); c.rect(0, 0, W, 119); c.rect(0, 119, W, 61 * (1 - k)); c.clip();
+      person(150, py, lerp(30, 24, k), { hair: true, alpha: 1 - k * 0.7 });
+      c.restore();
+      // 壁のなかの手
+      if (k > 0.3) { c.fillStyle = 'rgba(220,226,214,' + (k * 0.8) + ')'; for (var h = 0; h < 4; h++) c.fillRect(140 + h * 6, 70 + h * 3, 3, 14); }
+    }
+    if (t >= T213 - 5 && t < T213 + 8) {
+      c.fillStyle = '#e8f0e8'; c.font = '10px monospace'; c.textAlign = 'center';
+      c.fillText('（コン　コン　コン）', 160, 40);
+    }
+  }
+  function noise(a) {
+    var img = c.getImageData(0, 0, W, H);
+    for (var i = 0; i < img.data.length; i += 4) {
+      if (Math.random() < a) { var v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; }
+    }
+    c.putImageData(img, 0, 0);
+  }
+  function overlay() {
+    // 走査線・緑がかった色・時刻
+    c.fillStyle = 'rgba(40,90,50,.12)'; c.fillRect(0, 0, W, H);
+    c.fillStyle = 'rgba(0,0,0,.25)';
+    for (var y = 0; y < H; y += 3) c.fillRect(0, y, W, 1);
+    if (Math.random() < 0.08) { var yy = Math.random() * H; c.fillStyle = 'rgba(200,255,200,.08)'; c.fillRect(0, yy, W, 4); }
+    c.fillStyle = '#e8f0e8';
+    c.font = '9px monospace';
+    c.textAlign = 'left';
+    c.fillText('CAM' + cam + '  2026-11-04  ' + hms(t), 6, 12);
+    if (Math.floor(performance.now() / 600) % 2) { c.fillStyle = '#e33'; c.beginPath(); c.arc(W - 30, 9, 3, 0, Math.PI * 2); c.fill(); }
+    c.fillStyle = '#e8f0e8';
+    c.textAlign = 'right';
+    c.fillText('REC', W - 6, 12);
+  }
+
+  function render() {
+    if (cam === 1) drawCam1();
+    else if (cam === 2) drawCam2();
+    else if (cam === 3) drawCam3();
+    else drawCam4();
+    overlay();
+    tcEl.textContent = hms(t) + '　×' + rate;
+    if (t >= T213 - 20 && t <= T213 + 60) seen213[cam] = true;
+    checks();
+  }
+  function log(s) {
+    var p = document.createElement('div');
+    p.textContent = '[' + hms(t) + '] ' + s;
+    logEl.appendChild(p);
+  }
+  var qShown = false;
+  function checks() {
+    // CAM4 で壁に入るところを見たら……
+    if (cam === 4 && t >= T213 + 50 && !crawlDone) {
+      crawlDone = true;
+      playing = false;
+      document.getElementById('pp').textContent = '▶';
+      DWD.sfx.meow(true);
+      setTimeout(function () {
+        DWD.scare({ type: 'crawl' }).then(function () { showQ(); });
+      }, 600);
+    }
+    if (cam === 4 && t >= T213 + 40 && crawlDone && !qShown) showQ();
+  }
+  function showQ() {
+    if (qShown) return;
+    qShown = true;
+    var q = document.getElementById('q');
+    q.classList.remove('hidden');
+    var opts = document.getElementById('opts');
+    ['201', '202', '203', '204', 'かべ', 'そと'].forEach(function (o) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn';
+      b.textContent = o;
+      b.addEventListener('click', function () { answer(o); });
+      opts.appendChild(b);
+    });
+    q.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  var wrong = 0;
+  function answer(o) {
+    if (DWD.isScaring()) return;
+    var err = document.getElementById('err');
+    if (o === 'かべ') {
+      err.textContent = 'そう。　202と203の　あいだ';
+      DWD.sfx.knock(3);
+      DWD.reach(11);
+      setTimeout(function () { DWD.go('../11/index.html', 1200); }, 1500);
+      return;
+    }
+    wrong++;
+    DWD.inc('miss');
+    if (wrong % 2 === 0) DWD.scare({ type: 'face' });
+    err.textContent = o === '202' ? 'へやには　はいった。　そのあとは？' : 'ちがう。　CAM4 を　もういちど';
+  }
+
+  // 操作
+  var pp = document.getElementById('pp');
+  pp.addEventListener('click', function () {
+    playing = !playing;
+    pp.textContent = playing ? '❚❚' : '▶';
+    if (playing && t >= 3000) t = 0;
+  });
+  document.getElementById('spd').addEventListener('click', function () {
+    rate = rate === 60 ? 240 : rate === 240 ? 15 : 60;
+    this.textContent = '×' + rate;
+  });
+  seek.addEventListener('input', function () { t = +seek.value; render(); });
+  DWD.$$('#cams button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (b.disabled) return;
+      cam = +b.dataset.c;
+      DWD.$$('#cams button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      DWD.sfx.static(0.12, 0.2);
+      render();
+    });
+  });
+  if (cam4) {
+    var b4 = document.querySelector('[data-c="4"]');
+    b4.disabled = false;
+    b4.querySelector('small').textContent = '202室内';
+  }
+
+  // 気になる時刻の記録（ヒント）
+  var NOTES = [[62, 'CAM1　人が　はいってくる'], [1680, 'CAM2　202の　ドアが　ひらく'], [T213, 'CAM2　信号が　とぎれる'], [2880, 'CAM1　階段の下に　だれか']];
+  var noted = {};
+  var last = performance.now();
+  (function loop(now) {
+    var dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    if (playing && !DWD.isScaring()) {
+      t = Math.min(3000, t + dt * rate);
+      seek.value = Math.floor(t);
+      NOTES.forEach(function (n) { if (!noted[n[0]] && t >= n[0]) { noted[n[0]] = true; log(n[1]); } });
+      if (t >= 3000) { playing = false; pp.textContent = '▶'; }
+    }
+    render();
+    requestAnimationFrame(loop);
+  })(performance.now());
+
+  DWD.gate({ title: 'LAYER 10 に　おりますか', button: 'おりる', warn: '監視カメラの録画です。▶で再生' }).then(function () {
+    DWD.drone(0.1);
+    playing = true;
+    pp.textContent = '❚❚';
+    DWD.haunt({ min: 20000, max: 34000, big: false, paused: function () { return playing; } });
+  });
+})();
+</script>
+</body>
+</html>

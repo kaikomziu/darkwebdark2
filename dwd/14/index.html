@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/14</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  body { transition: background-color 6s; }
+  .voices { max-width: 560px; margin: 16px auto 0; min-height: 40vh; }
+  .v { margin: 0 0 8px; font-size: clamp(15px, 4.2vw, 18px); letter-spacing: .12em; opacity: 0; transition: opacity 1s; line-height: 1.9; }
+  .v.on { opacity: 1; }
+  .v .w { display: inline-block; min-width: 3.4em; font-size: 12px; color: #5d5650; letter-spacing: .1em; }
+  .v.yuki { color: #d9c8b0; }
+  .v.mai { color: #c8c0e0; }
+  .v.haruka { color: #d08080; }
+  .v.wall { color: #a01010; }
+  .v.sys { color: #6e655e; text-align: center; }
+  .knockv { text-align: center; font: 900 clamp(26px, 9vw, 44px)/1.4 "Hiragino Mincho ProN", "Yu Mincho", serif; color: #a01010; min-height: 1.5em; letter-spacing: .3em; transition: opacity .4s; }
+  .act { text-align: center; margin-top: 14px; }
+  .act .btn { min-width: 220px; min-height: 56px; }
+  .callf { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+  body.dawn { background: #2a3442; }
+  body.dawn .vignette { opacity: .3; }
+  body.white { background: #f2f2f2; color: #333; }
+  body.white .logo, body.white .layer { color: #999; text-shadow: none; }
+  .endline { text-align: center; font-size: clamp(16px, 4.6vw, 20px); letter-spacing: .15em; margin: 8px 0; opacity: 0; transition: opacity 1.4s; }
+  .endline.on { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 14 / 202と203の　あいだ<span class="sub">LAYER 05 の　べつの　かお</span></div>
+  <h1 class="logo">DarkWebDark/14</h1>
+  <div class="voices" id="voices"></div>
+  <div class="knockv" id="kv"></div>
+  <div class="act hidden" id="act">
+    <button type="button" class="btn" id="kb">ノックを　かえす</button>
+    <form class="callf hidden" id="callf"><input class="input" id="nm" maxlength="12" placeholder="なまえ" autocomplete="off"><button class="btn">よぶ</button></form>
+    <p class="err" id="err"></p>
+  </div>
+  <div id="ending"></div>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.05);
+  DWD.reach(14);
+  var voices = document.getElementById('voices');
+  var kv = document.getElementById('kv');
+  var act = document.getElementById('act');
+  var kb = document.getElementById('kb');
+  var callf = document.getElementById('callf');
+  var err = document.getElementById('err');
+  var who = DWD.who();
+  var prevName = DWD.prevName();
+  var loop2 = (DWD.get('clears') || 0) > 0;
+  var drone = null;
+  var phase = 'intro'; // intro → knock → call → end
+  var decided = false;
+
+  var LABEL = { yuki: 'ゆき', mai: 'まい', haruka: 'はるか', wall: 'かべ', sys: '' };
+  function line(kind, text, wait) {
+    var p = document.createElement('p');
+    p.className = 'v ' + kind;
+    if (LABEL[kind]) {
+      var w = document.createElement('span');
+      w.className = 'w';
+      w.textContent = LABEL[kind];
+      p.appendChild(w);
+    }
+    p.appendChild(document.createTextNode(text));
+    voices.appendChild(p);
+    requestAnimationFrame(function () { p.classList.add('on'); });
+    if (kind === 'wall') DWD.sfx.whisper(1.2);
+    else if (kind !== 'sys') DWD.sfx.breath();
+    p.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    return DWD.wait((wait || 2200) * DWD.speed());
+  }
+
+  async function intro() {
+    await line('sys', 'ここは　かべの　なか。', 2000);
+    await line('sys', 'はば　0.9メートル。　まっくらで　あたたかい。', 2400);
+    await line('sys', 'たったまま　ならんでいる　ひとたちの　いきが　きこえる。', 2600);
+    await line('yuki', '……だれ？', 1800);
+    await line('yuki', 'まい？　まいなの？', 2000);
+    await line('mai', 'ちがうよ　ゆき。　わたしは　ここ。', 2200);
+    await line('mai', 'きてくれたんだ。' + (who === 'あなた' ? '' : '　' + who + '。'), 2200);
+    await line('mai', 'ここには　みんな　いる。　はるかさんも。　ゆきも。　わたしも。' + (prevName ? '　' + prevName + 'さんも。' : ''), 2800);
+    await line('haruka', 'なまえを　よばれた　ものは　そとに　でられる。', 2400);
+    await line('haruka', 'よんだ　ものが　かわりに　はいる。', 2400);
+    await line('mai', 'わたしは　いいから。　ゆきを　よんで。', 2400);
+    if (loop2) await line('mai', '……ほんとうは。　こたえないで　ほしい。', 2600);
+    await line('wall', 'ノックが　きたら　3かい　かえして。　それから　なまえを　よんで。', 2000);
+    knockPhase();
+  }
+
+  /* ---- ノック ---- */
+  var returned = 0;
+  var lastInput = 0;
+  var idleTimer = null;
+  var idleW1 = false, idleW2 = false; // 何もしないでいるときの声（1回ずつ）
+  function knockPhase() {
+    phase = 'knock';
+    act.classList.remove('hidden');
+    lastInput = Date.now();
+    wallKnock();
+    // 何もしないでいると……（END2）
+    idleTimer = setInterval(function () {
+      if (decided) return clearInterval(idleTimer);
+      var idle = (Date.now() - lastInput) / 1000;
+      var need = DWD.rtaRunning() ? 30 : 45;
+      if (idle > need * 0.45 && !idleW1) { idleW1 = true; line('mai', '……', 1000); }
+      if (idle > need * 0.75 && !idleW2) { idleW2 = true; line('mai', 'そう。　それで　いい。', 1000); }
+      if (idle > need) { clearInterval(idleTimer); end2(); }
+    }, 500);
+  }
+  var wallTimer = null;
+  function wallKnock() {
+    if (decided) return;
+    DWD.sfx.knock(3, 0.4);
+    kv.textContent = 'コン　コン　コン';
+    kv.style.opacity = 1;
+    setTimeout(function () { kv.style.opacity = 0.2; }, 1500);
+    wallTimer = setTimeout(wallKnock, DWD.rand(7000, 9000));
+  }
+  ['pointerdown', 'keydown'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      if (e.target.closest && e.target.closest('.dwd-cfg, .dwd-cfgp')) return;
+      lastInput = Date.now();
+      idleW1 = idleW2 = false;
+    }, true);
+  });
+  kb.addEventListener('click', function () {
+    if (phase !== 'knock' || decided) return;
+    returned++;
+    DWD.sfx.knock(1, 0.3, 0.6);
+    kb.textContent = new Array(returned + 1).join('コン　').trim();
+    if (returned >= 3) {
+      phase = 'call';
+      kb.disabled = true;
+      setTimeout(function () {
+        line('wall', 'こたえたね。　だれを　よぶ？', 800);
+        callf.classList.remove('hidden');
+        document.getElementById('nm').focus({ preventScroll: true });
+      }, 700);
+    }
+  });
+
+  /* ---- なまえを呼ぶ ---- */
+  var wrong = 0;
+  callf.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (decided || DWD.isScaring()) return;
+    var raw = document.getElementById('nm').value;
+    var v = DWD.norm(raw);
+    if (!v) return;
+    if (['ゆき', 'yuki', 'しらいしゆき', '白石ゆき', 'ゆきちゃん', '雪'].indexOf(v) >= 0) return end1();
+    if (['はるか', 'haruka', 'まみやはるか', '間宮はるか', 'はるかさん', '春香'].indexOf(v) >= 0) return end3();
+    wrong++;
+    DWD.inc('miss');
+    if (['まい', 'mai', 'まいまい', 'まいちゃん'].indexOf(v) >= 0) {
+      line('mai', 'わたしは　だめ。　わたしは　じぶんで　はいったから。', 1000);
+      DWD.scare({ type: 'girl', dur: 1000 });
+      return;
+    }
+    if (['くろ', 'kuro', 'クロ', '黒'].indexOf(v) >= 0) {
+      line('sys', 'ニャア。　クロは　もう　でている。　かえっていった　ほうは　クロじゃないけど。', 1000);
+      return;
+    }
+    var mine = DWD.norm(DWD.get('name') || '') ;
+    if ((mine && v === mine) || (prevName && v === DWD.norm(prevName)) || v === 'あなた' || v === 'わたし') {
+      line('wall', 'それは　あなたの　なまえ。　あなたは　もう　ここに　いる。', 1000);
+      DWD.scare({ type: 'face' });
+      return;
+    }
+    line('wall', 'そのひとは　ここに　いない。', 1000);
+    if (wrong % 2 === 0) DWD.scare({ type: 'hands' });
+  });
+
+  /* ---- エンディング ---- */
+  function decide(n) {
+    decided = true;
+    phase = 'end';
+    clearTimeout(wallTimer);
+    if (idleTimer) clearInterval(idleTimer);
+    var ms = DWD.rtaStop();
+    if (ms !== null) DWD.set('lastRta', ms);
+    var ends = DWD.get('endings') || [];
+    if (ends.indexOf(n) < 0) ends.push(n);
+    DWD.set('endings', ends);
+    DWD.set('lastEnd', n);
+    act.classList.add('hidden');
+    kv.textContent = '';
+  }
+  function endLines(lines, gap) {
+    var box = document.getElementById('ending');
+    box.innerHTML = '';
+    var i = 0;
+    return new Promise(function (res) {
+      (function next() {
+        if (i >= lines.length) return res();
+        var p = document.createElement('p');
+        p.className = 'endline' + (lines[i][1] ? ' ' + lines[i][1] : '');
+        p.textContent = lines[i][0];
+        box.appendChild(p);
+        requestAnimationFrame(function () { p.classList.add('on'); });
+        p.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        i++;
+        setTimeout(next, (gap || 1800) * DWD.speed());
+      })();
+    });
+  }
+  function end1() {
+    decide(1);
+    line('yuki', '……まい？', 600);
+    DWD.sfx.heartbeat(3, 0.6);
+    setTimeout(function () {
+      document.body.classList.add('white');
+      voices.innerHTML = '';
+      if (drone) drone.stop();
+      DWD.sfx.chime();
+      endLines([['ゆきの　てを　つかんだ。'], ['あたたかい　てだった。'], ['ゆきが　そとへ　でていく。'], ['ひかりの　ほうへ。'], ['よかった。'], ['これで　ぜんぶ　おわり。']], 2000).then(function () {
+        DWD.set('stage', 'end1');
+        setTimeout(function () { location.href = '../../index.html'; }, 1600);
+      });
+    }, 2200);
+  }
+  function end3() {
+    decide(3);
+    line('haruka', '……おとうさん？', 600);
+    line('mai', 'どうして……', 600);
+    DWD.sfx.heartbeat(3, 0.6);
+    setTimeout(function () {
+      voices.innerHTML = '';
+      if (drone) drone.stop();
+      endLines([['はるかの　てを　つかんだ。'], ['つめたい　てだった。'], ['28ねんぶりに　はるかが　そとへ　でていく。'], ['コーヒーの　においが　する。'], ['まいの　こえが　とおくなる。']], 2000).then(function () {
+        DWD.set('stage', 'end3');
+        setTimeout(function () { location.href = '../../files.html'; }, 1600);
+      });
+    }, 2200);
+  }
+  function end2() {
+    decide(2);
+    voices.innerHTML = '';
+    if (drone) drone.set(0.04);
+    document.body.classList.add('dawn');
+    DWD.sfx.train(7);
+    endLines([
+      ['ノックが　やんだ。'],
+      ['あさが　きた。'],
+      ['だれも　はいらなかった。　だれも　でなかった。'],
+      ['まい：　こたえないでくれて　ありがとう。', 'mai'],
+      ['まい：　これで　だれも　ふえない。', 'mai'],
+      ['……'],
+      ['でも。'],
+      ['コン　コン　コン'],
+      ['こんや　2じ13ふん。　' + DWD.device() + 'の　むこうの　かべで　まってるね。']
+    ], 2300).then(function () {
+      DWD.sfx.knock(3, 0.3);
+      setTimeout(function () {
+        DWD.scare({ type: 'text', text: 'こたえないでね', dur: 1300 }).then(function () {
+          DWD.go('../../end.html?e=2', 900);
+        });
+      }, 1400);
+    });
+  }
+
+  DWD.gate({ title: 'LAYER 14　202と203の　あいだ', button: 'はいる', warn: 'さいごの　へや。　よく　きいて' }).then(function () {
+    drone = DWD.drone(0.16);
+    DWD.sfx.knock(3);
+    intro();
+  });
+})();
+</script>
+</body>
+</html>

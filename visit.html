@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>非公開アルバム「11/04」｜ひびログ</title>
+<link rel="stylesheet" href="assets/hibi.css">
+<style>
+  body { background: #d6d3db; }
+  .item { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin: 14px 0; }
+  .item .tm { font-family: "Courier New", monospace; font-size: 12px; color: var(--sub); letter-spacing: .1em; }
+  .item .memo { font-size: 15px; white-space: pre-wrap; margin: 6px 0 0; overflow-wrap: anywhere; }
+  .item canvas.pic { display: block; width: 100%; border-radius: 10px; margin-top: 8px; cursor: zoom-in; background: #111; aspect-ratio: 4 / 3; }
+  .rec { display: flex; align-items: center; gap: 10px; background: #2a2630; color: #ddd; border-radius: 12px; padding: 10px 12px; margin-top: 8px; flex-wrap: wrap; }
+  .rec button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: #7c6f9c; color: #fff; font-size: 16px; cursor: pointer; flex: none; }
+  .rec .nm { font-family: "Courier New", monospace; font-size: 13px; }
+  .rec .bar { flex: 1; min-width: 120px; height: 4px; background: #4a4452; border-radius: 2px; overflow: hidden; }
+  .rec .bar i { display: block; height: 100%; width: 0; background: #c9b8ff; }
+  .tr { margin: 8px 2px 0; font-size: 14px; line-height: 1.9; color: #3c3744; min-height: 0; }
+  .tr p { margin: 0; }
+  .tr .who { color: var(--sub); font-size: 12px; margin-right: 6px; }
+  .tr .wall { color: var(--red); }
+  .head2 { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .head2 h1 { font-size: 18px; margin: 0; }
+  .lock { font-size: 11px; background: #444; color: #fff; border-radius: 4px; padding: 0 6px; }
+</style>
+</head>
+<body class="cold">
+<header class="topbar">
+  <a class="logo" href="index.html"><i></i>ひびログ</a>
+  <nav>
+    <a href="index.html">まい</a>
+    <a href="talk.html" data-need="talk">トークル</a>
+    <a href="visit.html" class="on">アルバム</a>
+    <a href="files.html" data-need="files">資料</a>
+  </nav>
+</header>
+<div class="wrap">
+  <div class="head2"><h1>アルバム「11/04」</h1><span class="lock">非公開</span></div>
+  <p class="small">まい が 2026/11/04 に作成 ・ 写真 8 ・ 録音 3 ・ 最終更新 <span id="upd"></span></p>
+  <div id="album"></div>
+</div>
+<footer class="foot"><div data-dwd-ver="DarkWebDark 2 ／ ひびログ"></div></footer>
+
+<script src="assets/dwd.js"></script>
+<script src="assets/hibi.js"></script>
+<script>
+(function () {
+  'use strict';
+  HIBI.nav();
+  HIBI.tabHaunt();
+  HIBI.visit('visit');
+  HIBI.unlock('visit');
+  document.getElementById('upd').textContent = DWD.today() + ' ' + DWD.clock();
+
+  /* ---- 録音（すべて合成音） ---- */
+  var REC = {
+    r1: {
+      name: 'rec_0112.m4a', sec: 12,
+      lines: [[0.3, '', '（足音）'], [1.5, '', '（遠くから、電車が近づく音）'], [5, 'まい', 'すご……ほんとに線路の真横だ'], [8, 'まい', 'ゆきの部屋、電気ついてない'], [10.5, 'まい', '……あれ？　となりの窓、いま'] ],
+      play: function () { DWD.sfx.train(9); footsteps(6); }
+    },
+    r2: {
+      name: 'rec_0201.m4a', sec: 13,
+      lines: [[0.3, 'まい', 'クロ？　クロ、おいで'], [2.5, '', '（ニャア、ではない。低い声）'], [4.5, 'まい', '……え？'], [6, 'まい', 'クロ、首輪どうしたの'], [8, '', '（猫が、壁のほうを向いたまま動かない）'], [10.5, 'まい', 'ねえ、こっち見て']],
+      play: function () { setTimeout(function () { DWD.sfx.meow(true); }, 2400); setTimeout(function () { DWD.sfx.breath(); }, 6500); setTimeout(function () { DWD.sfx.scratch(1.2); }, 9000); }
+    },
+    r3: {
+      name: 'rec_0213.m4a', sec: 16,
+      lines: [[0.4, '', '（コン　コン　コン）'], [2.6, 'まい', '……ゆき？'], [4, 'まい', 'ゆきなの？'], [6, 'かべ', 'まい'], [7.6, 'かべ', 'こたえて'], [9.4, '', '（コン　コン　コン）'], [12, 'まい', '…………はい'], [13.5, '', '（録音はここで途切れている）']],
+      play: function () {
+        DWD.sfx.knock(3, 0.4);
+        setTimeout(function () { DWD.sfx.whisper(1.8); }, 5800);
+        setTimeout(function () { DWD.sfx.knock(3, 0.4); }, 9400);
+        setTimeout(function () { DWD.sfx.static(2.2, 0.35); }, 13200);
+      }
+    }
+  };
+  function footsteps(n) {
+    for (var i = 0; i < n; i++) setTimeout(function () { DWD.sfx.knock(1, 0.3, 0.2); }, i * 520);
+  }
+
+  var ITEMS = [
+    { tm: '00:58', photo: 'station', memo: '駅についた。終電。\nここから歩いて8分。' },
+    { tm: '01:12', photo: 'apart2', memo: 'みどり荘。線路のすぐ横。\n電車が通ると、窓がぜんぶ鳴る。', rec: 'r1' },
+    { tm: '01:20', photo: 'mailbox', memo: '郵便受け。\n201「田村」、202「白石」（ゆき）、204 は空室。\n203 だけ、名前のかわりに黄色いシール。「管理　間宮」。\n\n202 の郵便受けの裏に、鍵がテープでとめてあった。ゆき（じゃないだれか）の言ったとおり。' },
+    { tm: '01:31', photo: 'corridor', memo: '2階の外廊下。いちばん奥が 204。\nゆきの部屋は手前から2つ目。\n奥の蛍光灯だけ、ずっとチカチカしてる。', corridor: true },
+    { tm: '01:38', photo: 'door202', memo: 'ゆきの部屋のドア。メモが貼ってある。\n「ノックしたら　こたえて　２０３」\nゆきの字じゃない。' },
+    { tm: '01:40', photo: 'door203', memo: '203。ドアがほんの少しだけ開いてる。\n中は真っ暗で、なにも見えない。\nのぞいたら、のぞきかえされた気がした。\n\nドアにも「管理　間宮」のシール。マスターの名字。' },
+    { tm: '01:52', memo: 'こわいからひびログに投稿した。\nだれか見てて。' },
+    { tm: '01:58', photo: 'room202', memo: 'ゆきの部屋に入った。だれもいない。電気がつかない。\n203側の壁の前に、クロがいた。\n\nクロ……首輪がない。\nゆきが毎日つけてた、赤い首輪。\n\nクロは壁のほうを向いたまま、こっちを見ない。', rec: 'r2' },
+    { tm: '02:13', memo: '', rec: 'r3' },
+    { tm: '02:13', photo: 'black', memo: '', last: true }
+  ];
+
+  var album = document.getElementById('album');
+  var corridorOpens = 0;
+  ITEMS.forEach(function (it) {
+    var d = document.createElement('section');
+    d.className = 'item';
+    d.innerHTML = '<div class="tm"></div><div class="memo"></div>';
+    d.querySelector('.tm').textContent = '11/04 ' + it.tm;
+    d.querySelector('.memo').textContent = it.memo;
+    if (!it.memo) d.querySelector('.memo').remove();
+    if (it.photo) {
+      var cv = document.createElement('canvas');
+      cv.className = 'pic';
+      HIBI.photo(cv, it.photo, { figures: 0 });
+      d.appendChild(cv);
+      cv.addEventListener('click', function () { openPhoto(it, cv); });
+    }
+    if (it.rec) d.appendChild(recEl(REC[it.rec]));
+    album.appendChild(d);
+  });
+
+  var blackDone = false;
+  function openPhoto(it, small) {
+    if (DWD.isScaring()) return;
+    if (it.corridor) {
+      // 開くたびに、廊下に人が増える
+      corridorOpens++;
+      HIBI.viewer(function (cv) { HIBI.photo(cv, 'corridor', { figures: corridorOpens }); }, it.memo.split('\n')[0]);
+      HIBI.photo(small, 'corridor', { figures: corridorOpens });
+      if (corridorOpens === 3) setTimeout(function () { DWD.sfx.breath(); }, 700);
+      return;
+    }
+    if (it.last) {
+      var v = HIBI.viewer(function (cv) { HIBI.photo(cv, 'black'); }, '　');
+      if (!blackDone) {
+        blackDone = true;
+        DWD.set('visitScare', true);
+        setTimeout(function () {
+          v.close();
+          DWD.scare({ type: 'crawl' }).then(function () {
+            HIBI.toast('ひびログに <b>下書き</b> が ふえています');
+          });
+        }, 2600);
+      }
+      return;
+    }
+    HIBI.viewer(function (cv) { HIBI.photo(cv, it.photo); }, it.memo.split('\n')[0], function () {
+      if (it.photo === 'door203') setTimeout(function () { DWD.sfx.creak(1.6); }, 600);
+    });
+  }
+
+  var playing = null;
+  function recEl(r) {
+    var wrap = document.createElement('div');
+    var box = document.createElement('div');
+    box.className = 'rec';
+    box.innerHTML = '<button type="button" aria-label="再生">▶</button><span class="nm"></span><span class="bar"><i></i></span><span class="nm len"></span>';
+    box.querySelector('.nm').textContent = r.name;
+    box.querySelector('.len').textContent = '0:' + ('0' + r.sec).slice(-2);
+    var tr = document.createElement('div');
+    tr.className = 'tr';
+    wrap.appendChild(box);
+    wrap.appendChild(tr);
+    var btn = box.querySelector('button');
+    var bar = box.querySelector('.bar i');
+    btn.addEventListener('click', function () {
+      if (playing) return;
+      playing = r;
+      btn.textContent = '■';
+      tr.innerHTML = '';
+      r.play();
+      var t0 = performance.now();
+      var shown = 0;
+      (function loop() {
+        var t = (performance.now() - t0) / 1000;
+        bar.style.width = Math.min(100, (t / r.sec) * 100) + '%';
+        while (shown < r.lines.length && r.lines[shown][0] <= t) {
+          var L = r.lines[shown++];
+          var p = document.createElement('p');
+          if (L[1]) {
+            var w = document.createElement('span');
+            w.className = 'who';
+            w.textContent = L[1];
+            p.appendChild(w);
+          }
+          var s = document.createElement('span');
+          s.textContent = L[2];
+          if (L[1] === 'かべ') s.className = 'wall';
+          p.appendChild(s);
+          tr.appendChild(p);
+        }
+        if (t < r.sec) return requestAnimationFrame(loop);
+        btn.textContent = '▶';
+        playing = null;
+        if (r === REC.r3) DWD.set('heardR3', true);
+      })();
+    });
+    return wrap;
+  }
+
+  DWD.gate({ title: '非公開アルバム「11/04」を ひらきますか', button: 'ひらく', warn: '録音は ▶ で再生できます' }).then(function () {
+    DWD.drone(0.07);
+    DWD.haunt({ min: 16000, max: 30000, big: false, textSel: '.memo', paused: function () { return !!playing || !!document.querySelector('.viewer'); } });
+  });
+})();
+</script>
+</body>
+</html>

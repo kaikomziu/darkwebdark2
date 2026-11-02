@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/11</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  .clock { text-align: center; font: 700 clamp(40px, 13vw, 76px)/1.1 "Courier New", monospace; letter-spacing: .06em; color: #d8cfc4; margin: 10px 0 0; font-variant-numeric: tabular-nums; }
+  .clock .s { color: #a01010; }
+  .date { text-align: center; font: 12px "Courier New", monospace; color: #5d5650; letter-spacing: .2em; }
+  .doorw { display: flex; justify-content: center; margin: 22px 0 6px; }
+  .door { width: min(180px, 46vw); aspect-ratio: 2 / 3.6; position: relative; border: 0; padding: 0; cursor: pointer; background: linear-gradient(90deg, #1b120f, #2a1b15 50%, #1b120f); box-shadow: inset 0 0 0 4px #0c0807, 0 0 0 1px #3a2620; touch-action: manipulation; transition: transform .8s ease, box-shadow .2s; transform-origin: left center; }
+  .door:active { box-shadow: inset 0 0 0 4px #0c0807, 0 0 0 1px #a01010; }
+  .door .plate { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); background: #c9bfa8; color: #2a1a10; font: 700 14px "Courier New", monospace; padding: 2px 8px; letter-spacing: .1em; white-space: nowrap; }
+  .door::after { content: ""; position: absolute; right: 12%; top: 54%; width: 10px; height: 10px; border-radius: 50%; background: #6a563f; }
+  .door.open { transform: perspective(600px) rotateY(-80deg); }
+  .kn { text-align: center; font: 14px "Courier New", monospace; color: #a01010; min-height: 1.6em; letter-spacing: .3em; }
+  .tline { text-align: center; color: #8a7e74; font-size: 15px; letter-spacing: .12em; margin: 10px 0 0; min-height: 2em; }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 11 / じこく<span class="sub">：13</span></div>
+  <h1 class="logo">DarkWebDark/11</h1>
+  <div class="draft"><span class="dh">まい の 下書き ／ 11/04 02:13</span>この　とびらは　きまった　ときにしか　あかない。<br>ふだがって　いる。　よく　みて。</div>
+  <div class="date" id="date"></div>
+  <div class="clock" id="clock">--:--:--</div>
+  <p class="tline" id="tline"></p>
+  <div class="doorw"><button type="button" class="door" id="door" aria-label="とびら"><span class="plate">‥：‥：13</span></button></div>
+  <p class="kn" id="kn"></p>
+  <p class="err" id="err"></p>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.05);
+  DWD.reach(11);
+  var clockEl = document.getElementById('clock');
+  var tline = document.getElementById('tline');
+  var kn = document.getElementById('kn');
+  var err = document.getElementById('err');
+  var door = document.getElementById('door');
+  var started = false, done = false;
+
+  // 時間帯でかわる言葉
+  function lineFor(d) {
+    var h = d.getHours(), m = d.getMinutes();
+    if (h === 2 && m === 13) return 'いま。　いま。　いま。';
+    if (h === 2) return 'いま　2じ。　おきてるの？　もうすぐ　だね';
+    if (h < 2) return 'もうすぐ　2じ13ふん。　まってるね';
+    if (h < 5) return 'ノックの　あと。　かべの　なかは　しずか';
+    if (h < 10) return 'あさ。　かべの　なかにも　あさは　くる？';
+    if (h < 17) return 'ひるまは　みんな　ねている。　しずかに';
+    if (h < 21) return 'ゆうがた。　ゆきが　かえってくる　じかん　だった';
+    return 'よる。　もうすこしで　ノックの　じかん';
+  }
+  function pad(n) { return ('0' + n).slice(-2); }
+  var lastSec = -1;
+  var special = false;
+  function tick() {
+    var d = new Date();
+    var s = d.getSeconds();
+    // ときどき 13 で止まって見える
+    var shownS = (!started || done) ? s : (Math.random() < 0.004 ? 13 : s);
+    clockEl.innerHTML = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':<span class="s">' + pad(shownS) + '</span>';
+    document.getElementById('date').textContent = DWD.today();
+    tline.textContent = lineFor(d);
+    if (started && s !== lastSec) {
+      lastSec = s;
+      DWD.sfx.tick(s === 13);
+      if (s === 13) { door.style.boxShadow = 'inset 0 0 0 4px #0c0807, 0 0 18px #a0101088'; }
+      if (s === 14) { door.style.boxShadow = ''; }
+      // 本当に 2時13分に開いていたら……
+      if (!special && !done && d.getHours() === 2 && d.getMinutes() === 13) {
+        special = true;
+        DWD.set('real213', true);
+        open(true);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+
+  // ノックの判定：同じ「13秒」のあいだに3回
+  var knocks = [];
+  var wrongTimes = 0;
+  door.addEventListener('click', function () {
+    if (!started || done || DWD.isScaring()) return;
+    var d = new Date();
+    DWD.sfx.knock(1);
+    var s = d.getSeconds();
+    var key = d.getHours() + ':' + d.getMinutes() + ':' + s;
+    if (s === 13) {
+      knocks = knocks.filter(function (k) { return k === key; });
+      knocks.push(key);
+      kn.textContent = new Array(knocks.length + 1).join('コン　').trim();
+      if (knocks.length >= 3) open(false);
+      return;
+    }
+    knocks = [];
+    kn.textContent = 'コン';
+    wrongTimes++;
+    if (wrongTimes === 3 || wrongTimes === 9) {
+      DWD.inc('miss');
+      DWD.scare({ type: 'face' }).then(function () {
+        err.textContent = 'いまじゃない。　ふだを　みて';
+      });
+    } else if (wrongTimes > 4) {
+      err.textContent = 'ふだの　すうじに　なった　ときに　3かい';
+    }
+  });
+
+  function open(real) {
+    done = true;
+    kn.textContent = 'コン　コン　コン';
+    DWD.sfx.knock(3, 0.25);
+    err.textContent = real ? 'ほんとうに　2じ13ふん　に　きてくれた' : 'こたえた';
+    setTimeout(function () {
+      door.classList.add('open');
+      DWD.sfx.creak(1.6);
+    }, 900);
+    setTimeout(function () {
+      if (real) DWD.scare({ type: 'crawl' }).then(next);
+      else next();
+    }, 2600);
+  }
+  function next() {
+    DWD.reach(12);
+    DWD.go('../12/index.html', 1100);
+  }
+
+  DWD.gate({ title: 'LAYER 11 に　おりますか', button: 'おりる', warn: '※ 時計の音がします' }).then(function () {
+    started = true;
+    DWD.drone(0.1);
+    DWD.haunt({ min: 20000, max: 34000, big: false, silent: true });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+/* DarkWebDark（裏側）の共通スタイル */
+:root {
+  --bg: #050505;
+  --ink: #b9b2a8;
+  --dim: #5d5650;
+  --red: #d01515;
+  --line: #1e1a18;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "MS Mincho", serif;
+  line-height: 2; min-height: 100vh; overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+a { color: var(--red); }
+.page { position: relative; z-index: 2; max-width: 760px; margin: 0 auto; padding: 40px 16px 60px; }
+.layer {
+  font-family: "Courier New", monospace; font-size: 12px; letter-spacing: .4em; color: var(--dim);
+  text-align: center; margin-bottom: 8px;
+}
+.logo {
+  font-family: "Courier New", monospace; text-align: center; font-size: clamp(30px, 9vw, 56px);
+  letter-spacing: .12em; margin: 0 0 24px; color: #ddd; font-weight: 700;
+  text-shadow: 2px 0 #f00, -2px 0 #0ff; animation: logoFlick 4s infinite;
+}
+@keyframes logoFlick {
+  0%, 92%, 100% { opacity: 1; transform: none; }
+  93% { opacity: .2; transform: skewX(20deg); }
+  95% { opacity: 1; transform: translateX(6px); }
+  97% { opacity: .5; }
+}
+.msg { text-align: center; font-size: clamp(16px, 4.4vw, 20px); letter-spacing: .15em; min-height: 2em; margin: 6px 0; }
+.dim { color: var(--dim); }
+.red { color: var(--red); }
+.center { text-align: center; }
+.btn {
+  display: inline-block; font: inherit; font-size: 16px; letter-spacing: .3em; padding: 12px 24px;
+  border: 1px solid #4a1010; background: #0d0606; color: #e0c8c8; cursor: pointer; text-decoration: none;
+  border-radius: 2px; transition: background .2s, border-color .2s; touch-action: manipulation;
+}
+.btn:hover, .btn:focus-visible { background: #2a0808; border-color: var(--red); outline: none; }
+.btn[disabled] { opacity: .35; cursor: default; }
+.input {
+  font: inherit; font-size: 18px; background: #000; color: #eee; border: 1px solid #3a1010;
+  padding: 10px 12px; width: min(280px, 100%); text-align: center; letter-spacing: .2em; border-radius: 2px;
+}
+.input:focus { outline: none; border-color: var(--red); }
+.fade-in { animation: fadeIn 1.5s ease both; }
+@keyframes fadeIn { from { opacity: 0; } }
+.hidden { display: none !important; }
+.vignette {
+  position: fixed; inset: 0; pointer-events: none; z-index: 3;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.85) 100%);
+}
+.footer-ver { position: relative; z-index: 2; }
+.blink { animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.err { color: var(--red); font-size: 14px; min-height: 1.6em; text-align: center; letter-spacing: .1em; }
+
+/* ---- DarkWebDark 2 で追加 ---- */
+img, canvas { max-width: 100%; }
+.page { overflow-wrap: anywhere; }
+.layer .sub { display: block; font-size: 10px; letter-spacing: .25em; color: #3d3833; margin-top: 2px; }
+.draft {
+  border-left: 2px solid #4a1010; background: rgba(40, 0, 0, .25); padding: 10px 14px; margin: 18px auto;
+  max-width: 560px; font-size: 14px; line-height: 1.9; color: #a89a90; letter-spacing: .08em;
+}
+.draft .dh { display: block; font-family: "Courier New", monospace; font-size: 11px; color: #6b3030; letter-spacing: .2em; margin-bottom: 4px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.small { font-size: 13px; }
+.mono { font-family: "Courier New", monospace; }
+.box { border: 1px solid var(--line); background: #070505; padding: 14px; }
+.flicker { animation: flick 3s infinite; }
+@keyframes flick { 0%, 90%, 100% { opacity: 1; } 92% { opacity: .2; } 94% { opacity: .9; } 96% { opacity: .3; } }

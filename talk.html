@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ゆき｜トークル</title>
+<link rel="stylesheet" href="assets/hibi.css">
+<style>
+  body { background: #c9ced8; }
+  .talkbar { position: sticky; top: 0; z-index: 30; background: #2f3a4f; color: #eef; display: flex; align-items: center; gap: 10px; padding: 10px 12px; padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+  .talkbar a { color: #cfd8ff; text-decoration: none; font-size: 22px; padding: 0 6px; }
+  .talkbar .mini { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; flex: none; }
+  .talkbar canvas { width: 100%; height: 100%; display: block; }
+  .talkbar .t1 { font-weight: 700; font-size: 15px; line-height: 1.2; }
+  .talkbar .t2 { font-size: 11px; color: #aab4d0; }
+  .talkbar .app { margin-left: auto; font-size: 12px; color: #8f9cc0; letter-spacing: .1em; }
+  .log { max-width: 640px; margin: 0 auto; padding: 12px 10px 120px; position: relative; z-index: 2; }
+  .day { text-align: center; margin: 16px 0 8px; }
+  .day span { background: rgba(40, 50, 70, .25); color: #fff; font-size: 11px; padding: 2px 10px; border-radius: 999px; }
+  .msg { display: flex; gap: 6px; margin: 6px 0; align-items: flex-end; }
+  .msg .mini { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex: none; align-self: flex-start; }
+  .msg canvas { width: 100%; height: 100%; display: block; }
+  .bub { background: #fff; color: #222; padding: 7px 11px; border-radius: 14px; max-width: min(74%, 420px); font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: 0 1px 1px rgba(0, 0, 0, .08); }
+  .msg .tm { font-size: 10px; color: #556; white-space: nowrap; }
+  .msg.me { flex-direction: row-reverse; }
+  .msg.me .bub { background: #a8d98f; }
+  .msg.odd .bub { background: #1b1b1f; color: #e9e2e2; letter-spacing: .08em; }
+  .msg.odd2 .bub { background: #3a0d12; color: #ffd0d0; }
+  .typing .bub { color: #888; font-style: italic; }
+  .reveal { opacity: 0; transform: translateY(6px); transition: opacity .5s, transform .5s; }
+  .reveal.on { opacity: 1; transform: none; }
+  .composer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; background: #eef0f4; border-top: 1px solid #b8bfcc; padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .composer form { max-width: 640px; margin: 0 auto; display: flex; gap: 8px; }
+  .composer input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 9px 12px; border-radius: 999px; border: 1px solid #b8bfcc; }
+  .composer button { font: inherit; border: 0; background: #2f3a4f; color: #fff; border-radius: 999px; padding: 0 16px; min-height: 40px; cursor: pointer; }
+  .composer .hint { max-width: 640px; margin: 0 auto 6px; font-size: 11px; color: #667; }
+  .read { font-size: 10px; color: #556; align-self: flex-end; }
+  .img-bub { padding: 4px; }
+  .img-bub canvas { width: 200px; max-width: 100%; height: auto; aspect-ratio: 4/3; display: block; border-radius: 10px; }
+  .dwd-cfg { bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important; }
+  .dwd-cfgp { bottom: calc(114px + env(safe-area-inset-bottom, 0px)) !important; }
+</style>
+</head>
+<body>
+<header class="talkbar">
+  <a href="index.html" aria-label="もどる">‹</a>
+  <div class="mini"><canvas id="ava"></canvas></div>
+  <div><div class="t1" id="tname">ゆき</div><div class="t2" id="tstat">最終ログイン：11/04 02:13</div></div>
+  <div class="app">トークル</div>
+</header>
+
+<div class="log" id="log" aria-live="polite"></div>
+
+<div class="composer">
+  <div class="hint" id="hint">まい のアカウントでログイン中</div>
+  <form id="form"><input id="inp" maxlength="60" placeholder="メッセージを入力" autocomplete="off"><button>送信</button></form>
+</div>
+<div data-dwd-ver="DarkWebDark 2 ／ トークル" style="position:relative;z-index:2;margin-bottom:90px"></div>
+
+<script src="assets/dwd.js"></script>
+<script src="assets/hibi.js"></script>
+<script>
+(function () {
+  'use strict';
+  var log = document.getElementById('log');
+  HIBI.avatar(document.getElementById('ava'), 'yuki', 'normal');
+  HIBI.tabHaunt();
+  HIBI.visit('talk');
+  HIBI.unlock('talk');
+
+  // [日付, 送り手(y=ゆき m=まい), 時刻, 本文, 種類]
+  // 種類: odd = ゆきではない何か / odd2 = まいではない何か / img = 画像
+  var LOG = [
+    ['2026/09/01'],
+    ['y', '18:02', 'まい〜！ 引っ越し終わった！'],
+    ['m', '18:05', 'おつかれ！ どんなとこ？'],
+    ['y', '18:06', '古いけど日当たりさいこう☀️\n家賃 2万1千円！'],
+    ['m', '18:06', 'やっす！！ なんかあるやつじゃん笑'],
+    ['y', '18:08', '不動産屋さんも「古いだけですよ」って笑ってたし大丈夫！'],
+    ['y', '18:09', '「みどり荘」の 202号室だよ。\n2階の、階段のぼって手前から2つ目'],
+    ['m', '18:10', 'こんど遊びに行くね🐈‍⬛ クロにもあいたい'],
+    ['2026/09/12'],
+    ['y', '20:31', 'こもれびのマスター、うちのアパートのこと知ってた'],
+    ['y', '20:31', '「となりの部屋、まだ空いてるのかい？」だって'],
+    ['m', '20:40', 'となり？'],
+    ['y', '20:41', '203。ずっと空き部屋なの。表札もなくて、郵便受けに「管理」ってシールだけ'],
+    ['2026/09/27'],
+    ['y', '02:20', 'まい起きてる？'],
+    ['y', '02:21', '203の方から、壁をノックするみたいな音がする'],
+    ['y', '02:21', 'いま 2時13分だった。3回。'],
+    ['m', '07:12', 'え、こわ……うち泊まりにくる？'],
+    ['y', '07:30', '大丈夫！ 古いから水道管だと思う😅'],
+    ['2026/10/03'],
+    ['y', '19:15', '管理会社に電話したら、うちは大家さんが直接管理してるんだって'],
+    ['y', '19:15', 'しかも大家さん、こもれびのマスターだった！'],
+    ['m', '19:20', '世間せまっ'],
+    ['y', '19:22', 'だから家賃安くしてくれたのかな〜。今度お礼いわなきゃ'],
+    ['y', '19:23', 'でもマスター、203のこと聞いたら「あそこは倉庫だよ」って。目が笑ってなかった'],
+    ['2026/10/09'],
+    ['y', '02:16', 'クロがずっと壁を見てる'],
+    ['y', '02:16', '', 'img'],
+    ['y', '02:17', 'ノックのたびに、壁の前に座るの'],
+    ['m', '08:00', '猫ってそういうとこあるよね……'],
+    ['2026/10/14'],
+    ['y', '07:02', 'クロがいない'],
+    ['y', '07:02', '窓もドアも閉めてたのに'],
+    ['m', '07:10', 'えっ すぐ行く！'],
+    ['y', '07:11', 'こないで'],
+    ['y', '07:11', 'まいは きちゃだめ'],
+    ['2026/10/20'],
+    ['m', '21:00', 'ゆき、ちゃんとごはん食べてる？'],
+    ['y', '23:58', 'うん'],
+    ['y', '23:59', 'ねえ まい。もしだれかにノックされても、ぜったい返事しないでね'],
+    ['2026/10/30'],
+    ['m', '17:30', 'ハロウィンどうする？ かぼちゃプリンの店、予約しとこうか？'],
+    ['2026/10/31'],
+    ['y', '03:03', 'まい'],
+    ['y', '03:03', 'たすけて'],
+    ['y', '03:03', 'ノック　とまらない'],
+    ['y', '03:04', 'だれかが　かわりに　こたえた'],
+    ['2026/11/01'],
+    ['y', '02:13', 'まい', 'odd'],
+    ['y', '02:13', 'まい', 'odd'],
+    ['y', '02:13', 'まい', 'odd'],
+    ['m', '08:31', 'ゆき？？ 電話でて！！'],
+    ['2026/11/02'],
+    ['y', '21:00', 'ただいま！ ずっと連絡できなくてごめんね😊'],
+    ['y', '21:00', 'クロも帰ってきたよ🐈‍⬛'],
+    ['m', '21:01', 'ゆき！！！ よかった……電話して！！'],
+    ['y', '21:13', 'でんわは　だめ', 'odd'],
+    ['y', '21:13', 'こえが　まだ　うまく　だせないの', 'odd'],
+    ['2026/11/03'],
+    ['m', '23:20', 'ねえ　ほんとに　ゆき？'],
+    ['y', '23:21', 'ゆき　だよ', 'odd'],
+    ['y', '23:21', 'まいも　あそびに　おいでよ', 'odd'],
+    ['y', '23:22', 'かぎは　ゆうびんうけの　うら', 'odd'],
+    ['y', '23:22', 'まいの　へやも　あるよ', 'odd'],
+    ['m', '23:30', 'ゆき、クロの首輪の色おぼえてる？'],
+    ['y', '23:30', 'くびわ', 'odd'],
+    ['y', '23:31', 'なかったよ', 'odd'],
+    ['m', '23:40', 'ゆきは毎日つけてた。赤いやつ。'],
+    ['2026/11/04'],
+    ['m', '01:40', 'いまから行く'],
+    ['y', '01:41', 'まってる', 'odd'],
+    ['m', '02:13', 'こん', 'odd2'],
+    ['m', '02:13', 'こん', 'odd2'],
+    ['m', '02:13', 'こん', 'odd2']
+  ];
+
+  function mini(who) {
+    var d = document.createElement('div');
+    d.className = 'mini';
+    var cv = document.createElement('canvas');
+    HIBI.avatar(cv, who, 'normal');
+    d.appendChild(cv);
+    return d;
+  }
+  function addRow(r, hidden) {
+    var el;
+    if (r.length === 1) {
+      el = document.createElement('div');
+      el.className = 'day';
+      el.innerHTML = '<span></span>';
+      el.querySelector('span').textContent = r[0];
+    } else {
+      el = document.createElement('div');
+      var me = r[0] === 'm';
+      el.className = 'msg' + (me ? ' me' : '') + (r[3] ? ' ' + r[3] : '');
+      if (!me) el.appendChild(mini('yuki'));
+      var b = document.createElement('div');
+      b.className = 'bub';
+      if (r[3] === 'img') {
+        b.className += ' img-bub';
+        var cv = document.createElement('canvas');
+        drawWallPhoto(cv);
+        b.appendChild(cv);
+      } else b.textContent = r[2];
+      el.appendChild(b);
+      var tm = document.createElement('div');
+      tm.className = 'tm';
+      tm.textContent = (me ? '既読 ' : '') + r[1];
+      el.appendChild(tm);
+    }
+    if (hidden) el.classList.add('reveal');
+    log.appendChild(el);
+    return el;
+  }
+  // 「クロがずっと壁を見てる」の写真
+  function drawWallPhoto(cv) {
+    cv.width = 400; cv.height = 300;
+    var c = cv.getContext('2d');
+    c.fillStyle = '#1d2230'; c.fillRect(0, 0, 400, 300);
+    c.fillStyle = '#272c3b'; c.fillRect(180, 0, 220, 230);
+    c.fillStyle = '#0b0b0e';
+    c.beginPath(); c.ellipse(130, 250, 40, 28, 0, 0, 7); c.fill();
+    c.beginPath(); c.arc(145, 215, 24, 0, 7); c.fill();
+    c.fillStyle = '#b01010'; c.fillRect(128, 232, 34, 5);
+    c.fillStyle = 'rgba(210,210,230,.09)';
+    for (var i = 0; i < 3; i++) { c.beginPath(); c.ellipse(260 + i * 40, 90 + i * 20, 14, 18, 0, 0, 7); c.fill(); }
+    c.fillStyle = 'rgba(255,255,255,.7)'; c.font = '14px monospace'; c.fillText('02:13', 345, 290);
+  }
+
+  // 前半は最初から表示。11/01 以降はスクロールに合わせて少しずつあらわれる
+  var cut = 0;
+  for (var i = 0; i < LOG.length; i++) if (LOG[i][0] === '2026/11/01') { cut = i; break; }
+  LOG.slice(0, cut).forEach(function (r) { addRow(r, false); });
+  var late = LOG.slice(cut).map(function (r) { return addRow(r, true); });
+
+  var started = false;
+  var revealIdx = 0;
+  var revealing = false;
+  function revealNext() {
+    if (revealing || revealIdx >= late.length) return;
+    revealing = true;
+    var el = late[revealIdx++];
+    el.classList.add('on');
+    if (el.classList.contains('odd')) DWD.sfx.ping(true);
+    else if (el.classList.contains('odd2')) DWD.sfx.knock(1);
+    else if (el.classList.contains('msg')) DWD.sfx.ping(false);
+    setTimeout(function () {
+      revealing = false;
+      if (revealIdx >= late.length) live();
+      else if (nearBottom()) revealNext();
+    }, el.classList.contains('day') ? 300 : 900 * DWD.speed());
+  }
+  function nearBottom() {
+    return window.innerHeight + window.scrollY >= document.body.scrollHeight - 260;
+  }
+  window.addEventListener('scroll', function () {
+    if (started && nearBottom()) revealNext();
+  }, { passive: true });
+
+  /* ---- 最後：いま、この画面のむこうへ ---- */
+  var liveDone = false;
+  var replied = false;
+  function typing(who) {
+    var el = document.createElement('div');
+    el.className = 'msg typing' + (who === 'm' ? ' me' : '');
+    if (who !== 'm') el.appendChild(mini('yuki'));
+    var b = document.createElement('div');
+    b.className = 'bub';
+    b.textContent = (who === 'm' ? 'まい' : 'ゆき') + ' が入力中…';
+    el.appendChild(b);
+    log.appendChild(el);
+    window.scrollTo(0, document.body.scrollHeight);
+    return el;
+  }
+  function say(who, text, cls) {
+    var t = typing(who);
+    return DWD.wait(DWD.rand(1200, 2200) * DWD.speed()).then(function () {
+      t.remove();
+      var el = addRow([who, DWD.clock(), text, cls || (who === 'm' ? 'odd2' : 'odd')], false);
+      DWD.sfx.ping(true);
+      window.scrollTo(0, document.body.scrollHeight);
+      return el;
+    });
+  }
+  function live() {
+    if (liveDone) return;
+    liveDone = true;
+    var who = DWD.who();
+    addRow([DWD.today() + '（きょう）']);
+    document.getElementById('tstat').textContent = 'オンライン';
+    DWD.sfx.buzz(2);
+    DWD.wait(1500).then(function () {
+      return say('y', who === 'あなた' ? 'ねえ' : who);
+    }).then(function () {
+      return say('y', 'まいの　ページ、みてくれて　ありがとう');
+    }).then(function () {
+      return say('y', 'いま　' + DWD.timeStr() + '　だね');
+    }).then(function () {
+      return say('y', DWD.device() + 'の　むこうに　いるの、わかるよ');
+    }).then(function () {
+      return say('m', 'みないで');
+    }).then(function () {
+      return say('y', 'ねえ　こたえて');
+    }).then(function () {
+      document.getElementById('hint').textContent = 'まい のアカウントでログイン中 ― 入力できます';
+      document.getElementById('inp').focus({ preventScroll: true });
+      // こたえなければ…
+      setTimeout(function () {
+        if (replied) return;
+        say('y', '……こたえないんだ').then(function () {
+          return say('y', 'かしこいね');
+        }).then(function () {
+          return say('y', 'まいは　すぐ　こたえたのに');
+        }).then(function () {
+          DWD.set('talkDone', true);
+          HIBI.toast('ひびログに <b>下書き</b> が ふえています');
+        });
+      }, 15000);
+    });
+  }
+
+  // 返信してしまうと……
+  document.getElementById('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var inp = document.getElementById('inp');
+    var v = inp.value.trim();
+    if (!v) return;
+    inp.value = '';
+    addRow(['m', DWD.clock(), v], false);
+    window.scrollTo(0, document.body.scrollHeight);
+    if (replied) return;
+    replied = true;
+    DWD.set('replied', true);
+    DWD.set('talkDone', true);
+    DWD.inc('miss');
+    DWD.sfx.knock(3, 0.25);
+    setTimeout(function () {
+      DWD.scare({ type: 'text', text: 'こたえたね', dur: 1200 }).then(function () {
+        return DWD.scare({ type: 'face', dur: 900 });
+      }).then(function () {
+        say('y', 'ありがとう').then(function () {
+          return say('y', 'へや、よういしておくね');
+        }).then(function () {
+          HIBI.toast('ひびログに <b>下書き</b> が ふえています');
+        });
+      });
+    }, 1300);
+  });
+
+  DWD.gate({ title: 'トークル　ゆき との トーク', button: 'ひらく', warn: '下へスクロールすると、つづきが読み込まれます' }).then(function () {
+    started = true;
+    DWD.roomTone(0.05);
+    // 最初の1件を出す。あとはスクロールするたびに増える
+    setTimeout(function () { revealNext(); }, 600);
+    DWD.haunt({ min: 18000, max: 34000, big: false, textSel: '.msg.odd .bub', paused: function () { return replied; } });
+  });
+})();
+</script>
+</body>
+</html>

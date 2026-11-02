@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DarkWebDark/06</title>
+<link rel="stylesheet" href="../../assets/dark.css">
+<style>
+  .backs { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; max-width: 520px; margin: 10px auto 18px; }
+  .back { aspect-ratio: 3 / 6; background: linear-gradient(#0e0a09, #050303); border: 1px solid #241815; border-radius: 2px; color: #6b2020; font: 700 11px/1.2 "Hiragino Mincho ProN", "Yu Mincho", serif; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 6px 0; cursor: pointer; touch-action: manipulation; writing-mode: vertical-rl; overflow: hidden; }
+  .back .n { writing-mode: horizontal-tb; transform: scaleX(-1); color: #3a2c26; font-family: "Courier New", monospace; font-size: 13px; }
+  .back:active { border-color: #800; }
+  .admin { background: #d8d4cc; color: #222; max-width: 420px; margin: 20px auto 0; border: 1px solid #888; font-family: "MS PGothic", "Osaka", "Hiragino Kaku Gothic ProN", sans-serif; box-shadow: 0 0 40px #0008; }
+  .admin .bar { background: linear-gradient(#335, #113); color: #dde; font-size: 13px; padding: 4px 8px; display: flex; justify-content: space-between; }
+  .admin .in { padding: 16px; }
+  .admin label { display: block; font-size: 13px; margin: 8px 0 2px; }
+  .admin input[type=text], .admin input[type=password] { width: 100%; font-size: 16px; padding: 6px 8px; border: 1px solid #777; background: #fff; color: #000; font-family: "Courier New", monospace; }
+  .admin .chk { display: flex; gap: 6px; align-items: center; font-size: 13px; margin: 10px 0; }
+  .admin .chk input { width: 18px; height: 18px; }
+  .admin button { font: inherit; font-size: 15px; padding: 8px 18px; border: 1px solid #555; background: linear-gradient(#f4f4f4, #ccc); cursor: pointer; color: #000; }
+  .admin a { color: #00c; font-size: 13px; cursor: pointer; }
+  .admin .e { color: #c00; font-size: 13px; min-height: 1.4em; margin: 8px 0 0; }
+  .admin .q { font-size: 15px; margin: 6px 0; font-weight: bold; }
+  .admin .step { font-size: 12px; color: #555; }
+  .ledger { max-width: 680px; margin: 18px auto 0; font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; }
+  .ledger h2 { text-align: center; font-size: 18px; letter-spacing: .3em; color: #c9bfb2; margin: 0 0 10px; }
+  .ledger table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ledger td, .ledger th { border-bottom: 1px solid #2a201c; padding: 7px 4px; vertical-align: top; text-align: left; }
+  .ledger th { color: #6b5d55; font-weight: normal; font-size: 12px; }
+  .ledger td.note { color: #a33; font-style: italic; }
+  .ledger tr.row { opacity: 0; transition: opacity .6s; }
+  .ledger tr.row.on { opacity: 1; }
+  .ledger .last { margin-top: 16px; color: #d33; text-align: center; letter-spacing: .1em; line-height: 2; opacity: 0; transition: opacity 1.5s; }
+  .ledger .last.on { opacity: 1; }
+  @media (max-width: 480px) { .ledger td.y { width: 3.4em; } .ledger td, .ledger th { font-size: 12px; } }
+</style>
+</head>
+<body>
+<div class="vignette"></div>
+<div class="page">
+  <div class="layer">LAYER 06 / うらがわの入口<span class="sub">LAYER 01 の　うらがわ</span></div>
+  <h1 class="logo">DarkWebDark/06</h1>
+  <div class="draft"><span class="dh">まい の 下書き ／ 11/04 02:13</span>ここ、LAYER 01 の　うらがわ。　とびらの　うらに　なまえが　かいてある。<br>ゆきの　なまえも　あった。</div>
+  <div class="backs" id="backs" aria-label="とびらの裏"></div>
+  <p class="msg dim" id="m1">とびらの　むこうは　かんりしゃ　ページ</p>
+
+  <div class="admin" id="login">
+    <div class="bar"><span>DarkWebDark 管理ページ</span><span>ver 0.203</span></div>
+    <div class="in" id="loginIn">
+      <label for="uid">ID</label>
+      <input type="text" id="uid" autocomplete="off" spellcheck="false">
+      <label for="pw">パスワード</label>
+      <input type="password" id="pw" autocomplete="off">
+      <div class="chk"><input type="checkbox" id="keep" checked><label for="keep" style="margin:0">ログイン状態を保持する</label></div>
+      <button type="button" id="doLogin">ログイン</button>
+      <p class="e" id="err"></p>
+      <a id="forgot">パスワードをお忘れですか？</a>
+    </div>
+  </div>
+
+  <div class="ledger hidden" id="ledger">
+    <h2>みどり荘　入居者台帳</h2>
+    <table><thead><tr><th>年</th><th>部屋</th><th>名前</th><th>備考（大家）</th></tr></thead><tbody id="rows"></tbody></table>
+    <p class="last" id="last"></p>
+    <p class="center" style="margin-top:22px"><a class="btn hidden" id="next" href="../7/index.html">したへ</a></p>
+  </div>
+</div>
+<div class="footer-ver" data-dwd-ver></div>
+
+<script src="../../assets/dwd.js"></script>
+<script>
+(function () {
+  'use strict';
+  DWD.noiseBg(0.05);
+  DWD.reach(6);
+  var prevName = DWD.prevName();
+
+  /* ---- とびらの裏 ---- */
+  var NAMES = ['小田', '竹内', 'ゆき', '林', 'クロ', 'はるか', 'まい', '', prevName || 'あなた'];
+  var backs = document.getElementById('backs');
+  NAMES.forEach(function (nm, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'back';
+    var s = document.createElement('span');
+    s.textContent = nm || '　';
+    var n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = 9 - i;
+    b.appendChild(s);
+    b.appendChild(n);
+    b.addEventListener('click', function () {
+      if (i === 8) { DWD.sfx.whisper(1.4); document.getElementById('m1').textContent = 'そこは　あなたの　とびら'; return; }
+      if (i === 7) { DWD.sfx.knock(3, 0.2); document.getElementById('m1').textContent = 'そこは　まだ　あいている'; return; }
+      DWD.sfx.knock(1);
+    });
+    backs.appendChild(b);
+  });
+
+  /* ---- ログイン画面（勝手に入力される） ---- */
+  var uid = document.getElementById('uid');
+  var pw = document.getElementById('pw');
+  var err = document.getElementById('err');
+  var keep = document.getElementById('keep');
+  var fails = 0;
+  var mode = 'login';
+
+  function autoType(el, text, speed) {
+    return new Promise(function (res) {
+      var i = 0;
+      el.value = '';
+      (function step() {
+        if (i >= text.length) return res();
+        el.value += text[i++];
+        DWD.sfx.type();
+        setTimeout(step, (speed || 160) * DWD.speed());
+      })();
+    });
+  }
+
+  function intro() {
+    setTimeout(function () {
+      autoType(uid, 'maimai_0612', 150).then(function () {
+        return DWD.wait(700);
+      }).then(function () {
+        return autoType(pw, '••••••••••••', 120);
+      }).then(function () {
+        return DWD.wait(500);
+      }).then(function () {
+        pw.value = '';
+        err.textContent = 'パスワードが　ちがいます（' + DWD.timeStr() + '　202号室から　ログインしようとしました）';
+        DWD.sfx.blip();
+      });
+    }, 1400);
+    // 保持のチェックが勝手に外れる
+    setTimeout(function () { keep.checked = false; DWD.sfx.blip(); }, 9000);
+  }
+
+  document.getElementById('doLogin').addEventListener('click', function () {
+    if (mode !== 'login' || DWD.isScaring()) return;
+    fails++;
+    DWD.inc('miss');
+    if (fails === 1) {
+      err.textContent = 'パスワードが　ちがいます。';
+    } else if (fails === 2) {
+      err.textContent = 'パスワードが　ちがいます。　まいの　パスワードは　まいしか　しらない。';
+      DWD.sfx.whisper(1.2);
+    } else {
+      pw.value = '';
+      DWD.scare({ type: 'face' }).then(function () {
+        err.textContent = '「パスワードをお忘れですか？」から　さいせってい　してください';
+        document.getElementById('forgot').style.fontWeight = 'bold';
+      });
+    }
+  });
+
+  /* ---- ひみつの質問 ---- */
+  var QS = [
+    { q: 'ゆきの　へやの　ばんごうは？', ok: function (v) { return /^202(ごうしつ|号室|ごう|号)?$/.test(v); }, hint: 'ヒント：トークルの 9/1、アルバムの郵便受け' },
+    { q: 'ノックが　きこえる　じこくは？', ok: function (v) { v = v.replace(/^(ごぜん|午前|よなか|夜中)/, ''); return /^0?2(:|時|じ)?13(分|ふん|ぷん)?$/.test(v); }, hint: 'ヒント：数字で答えてください（例　12:34）' },
+    { q: 'みどり荘の　大家の　みょうじは？', ok: function (v) { return ['まみや', '間宮', 'mamiya', 'まみやそういち', '間宮宗一'].indexOf(v) >= 0; }, hint: 'ヒント：203の郵便受けのシール／こもれびの店主' }
+  ];
+  document.getElementById('forgot').addEventListener('click', function () {
+    if (mode !== 'login') return;
+    mode = 'q';
+    askQ(0);
+  });
+  function askQ(i) {
+    var box = document.getElementById('loginIn');
+    if (i >= QS.length) return success();
+    var q = QS[i];
+    var wrong = 0;
+    box.innerHTML = '<p class="step">パスワードの再設定（' + (i + 1) + ' / 3）</p><p class="q"></p><input type="text" id="qa" autocomplete="off" spellcheck="false"><div style="margin-top:10px"><button type="button" id="qok">つぎへ</button></div><p class="e" id="qe"></p>';
+    box.querySelector('.q').textContent = 'ひみつの質問：' + q.q;
+    var inp = document.getElementById('qa');
+    var qe = document.getElementById('qe');
+    setTimeout(function () { inp.focus(); }, 50);
+    function check() {
+      var v = DWD.norm(inp.value);
+      if (!v) return;
+      if (q.ok(v)) {
+        DWD.sfx.knock(1);
+        askQ(i + 1);
+        return;
+      }
+      wrong++;
+      DWD.inc('miss');
+      DWD.sfx.blip();
+      qe.textContent = wrong >= 2 ? 'ちがいます。' + q.hint : 'ちがいます。';
+      if (wrong === 4) DWD.scare({ type: 'text', text: 'ちがう' });
+    }
+    document.getElementById('qok').addEventListener('click', check);
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') check(); });
+  }
+
+  function success() {
+    mode = 'done';
+    var box = document.getElementById('loginIn');
+    box.innerHTML = '<p class="q">パスワードを再設定しました。</p><p>あたらしいパスワード：<b style="font-family:Courier New,monospace">kotaenaide</b></p><p class="step">ログインしています…</p>';
+    DWD.sfx.chime();
+    setTimeout(function () {
+      DWD.sfx.static(0.4, 0.3);
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('m1').textContent = 'ようこそ　まい';
+      showLedger();
+    }, 2200);
+  }
+
+  /* ---- 入居者台帳 ---- */
+  function showLedger() {
+    var replied = DWD.get('replied');
+    var ROWS = [
+      ['1981', '—', 'みどり荘　竣工', ''],
+      ['1998', '203', '間宮　はるか', '11/04　2:13　こたえた。'],
+      ['1999', '203', '（空室）', 'はるかの　へやは　そのままに。　家賃は　わたしが　はらう'],
+      ['2000', '—', '間宮　宗一', 'みどり荘を　かいとった'],
+      ['2003', '202', '小田　さとみ', '2/13　こたえた。　かえってきたのは　はるかでは　なかった'],
+      ['2009', '202', '竹内　けんじ', '8/13　こたえた。　はるかでは　なかった'],
+      ['2014', '202', '林　ゆうか', '12/13　こたえた。　かえってきたものは　しゃべらなかった'],
+      ['2019', '202', '水野　たかし', 'こたえなかった。　3か月で　退去'],
+      ['2026', '202', '白石　ゆき', '9/01　入居。　家賃は　やすく'],
+      ['2026', '202', 'クロ（ゆきの猫）', '10/11　ないた。　かえってきた　ねこには　くびわが　なかった'],
+      ['2026', '202', '白石　ゆき', '10/31　3:03　こたえた。　11/02　かえってきたのは　ゆきの　かたちを　したもの'],
+      ['2026', '203', 'まい', '11/04　2:13　こたえた。'],
+      ['2026', '203', prevName || 'あなた', prevName ? '10/31　から　かべの　なかに　すんでいる' : (replied ? 'トークルで　こたえた。　へやは　よういした' : 'まだ　こたえていない')]
+    ];
+    document.getElementById('ledger').classList.remove('hidden');
+    var tb = document.getElementById('rows');
+    ROWS.forEach(function (r, i) {
+      var tr = document.createElement('tr');
+      tr.className = 'row';
+      r.forEach(function (c, k) {
+        var td = document.createElement('td');
+        td.textContent = c;
+        if (k === 0) td.className = 'y';
+        if (k === 3) td.className = 'note';
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+      setTimeout(function () {
+        tr.classList.add('on');
+        DWD.sfx.blip();
+        if (i === ROWS.length - 1) {
+          DWD.sfx.knock(3);
+          setTimeout(lastWords, 1600);
+        }
+      }, (600 + i * 650) * DWD.speed());
+    });
+  }
+  function lastWords() {
+    var last = document.getElementById('last');
+    last.innerHTML = '';
+    ['はるか。', 'おまえが　かえってくるまで、　なんにんでも　202に　いれる。', 'ゆるしてくれ。', '―― 間宮'].forEach(function (t) {
+      var s = document.createElement('div');
+      s.textContent = t;
+      last.appendChild(s);
+    });
+    last.classList.add('on');
+    DWD.sfx.whisper(2.4);
+    setTimeout(function () {
+      var nx = document.getElementById('next');
+      nx.classList.remove('hidden');
+      nx.addEventListener('click', function (e) {
+        e.preventDefault();
+        DWD.reach(7);
+        DWD.go('../7/index.html', 1000);
+      });
+    }, 2200);
+  }
+
+  DWD.gate({ title: 'LAYER 06 に　おりますか', button: 'おりる', warn: '※ 大きな音・突然の驚かしがあります' }).then(function () {
+    DWD.drone(0.14);
+    DWD.sfx.knock(3);
+    intro();
+    DWD.haunt({ min: 16000, max: 30000, big: false, paused: function () { return mode === 'done'; } });
+  });
+})();
+</script>
+</body>
+</html>
